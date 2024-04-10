@@ -1,7 +1,5 @@
 #!/usr/bin/env python
 # coding: utf-8
-
-
 import warnings
 warnings.filterwarnings("ignore") 
 import requests
@@ -13,24 +11,35 @@ import time
 import datetime
 from datetime import timedelta
 import numpy as np
-import timeseries as ts
+# import timeseries as ts
 # import app_config as cfg
 # import paho.mqtt.client as paho
 # config = cfg.getconfig()
 import os
 import time
 import datetime
-from datetime import timedelta
 from dataExchangelmpl import dataEx,config
 
 
-fileName = "PASSCO_INCINERATOR Random data.xlsx"
+currentTimeStamp = int(time.time()*1000)
+currentTime = datetime.datetime.now() + datetime.timedelta(hours=10,minutes=30)
+currentHour = currentTime.hour
+currentMinute =  currentTime.minute
+currentSecond = currentTime.second
+last5Minute = currentMinute - 5
 
-dataEx().downloadingFileMultipleFiles([fileName])
+validHour = currentHour % 3
+if validHour == 0:
+    validHour = 12
 
-df = pd.read_excel(fileName,engine="openpyxl")
+
+fileName = "WWS4.csv"
+
+# dataEx().downloadingFileMultipleFiles([fileName])
+df = pd.read_csv(fileName)
+print(df)
+
 df.drop(["description"],axis=1,inplace=True)
-
 
 
 df.set_index(keys = 'dataTagId',inplace=True)
@@ -40,38 +49,33 @@ df.reset_index(inplace=True)
 
 df.rename(columns = {"index":"time"},inplace=True)
 
-
-
+# print(df["time"].str[:7])
+df["time"] = df["time"].str[:7]
 df["time"]=pd.to_datetime(df['time'],format="%H:%M:%S")
-
-
-
-currentTimeStamp = int(time.time()*1000)
-currentTime = datetime.datetime.now()
-currentHour = currentTime.hour
-currentMinute =  currentTime.minute
-currentSecond = currentTime.second
-last5Minute = currentMinute - 5
-
-
 
 df['Hour'] = df['time'].dt.hour
 df['Minute'] = df['time'].dt.minute
 
 
-valid_df = df[(df['Hour'] == currentHour) &  (df["Minute"] > last5Minute) & (df["Minute"] <= currentMinute)]
+
+print(currentHour,validHour,last5Minute,currentMinute)
+valid_df = df[(df['Hour'] == validHour) &  (df["Minute"] > last5Minute) & (df["Minute"] <= currentMinute)]
 if len(valid_df) < 1:
     valid_df = df[:5]
-
 
 count = len(valid_df) -1
 for i in valid_df.index:
     valid_df.loc[i,"timeStamp"] = currentTimeStamp - 1*1000*60*count
     count = count - 1
 
+
+
+valid_df["timeStamp"].astype(int)
+
+
 for col in valid_df.columns:
     if col != "time" and col != "timeStamp" and col != "Hour" and col != "Minute":
-        tag = "WWS2_" + col
+        tag = "WWS3_" + col
         post_url = config["api"]["datapoints"]
         post_array = valid_df[["timeStamp",col]].dropna().values.tolist()
         print(tag)
@@ -79,11 +83,8 @@ for col in valid_df.columns:
         print(post_body)
         res1 = requests.post(post_url,json=post_body)
         print(res1.status_code)
-        
-        
-dataEx().removeFiles([fileName])
 
-
+# dataEx().removeFiles([fileName])
 
 
 

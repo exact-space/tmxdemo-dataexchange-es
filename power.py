@@ -18,19 +18,24 @@ global cross_tags
 from dataExchangelmpl import dataEx,config
 
 
-
+startIdx = int((os.environ.get("idx")))
+if startIdx == None:
+    print("no idx passed. Exiting...")
+    exit()
+    
 currentTimeStamp = int(time.time()*1000)
 
 
 currentTime = datetime.datetime.now()
-currentMonth = currentTime.month 
-currentQuarter = (currentMonth-1)//3 + 1
+# currentMonth = currentTime.month 
+# currentQuarter = (currentMonth-1)//3 + 1
 currentDay = currentTime.day 
 currentHour = currentTime.hour
 currentMinute =  currentTime.minute
 currentSecond = currentTime.second
 last5Minute = abs(currentMinute - 5)
-validMonth = (currentMonth - (currentQuarter-1)*3)
+# validMonth = (currentMonth - (currentQuarter-1)*3)
+validMonth = 5
 
 startDate = "2023/{}/{} {}:{}:{}".format(validMonth,currentDay,currentHour,last5Minute,currentSecond)
 endDate = "2023/{}/{} {}:{}:{}".format(validMonth,currentDay,currentHour,currentMinute,currentSecond)
@@ -52,7 +57,7 @@ startTimestamp=time.mktime(startDate.timetuple())*1000
 endTimestamp=time.mktime(endDate.timetuple())*1000
 
 
-unitsId = "61c0c34bb45a623b64fc3b12"
+unitsId = "65cdb12fd958e80007254cf3"
 dataEx = dataEx()
 # try:
     # dataEx.getLoginToken()
@@ -61,29 +66,34 @@ dataEx = dataEx()
 
 tag_df = dataEx.getTagmeta(unitsId)
 
-tagList = list(tag_df["dataTagId"]) + ['CEN1_Direct_Boiler_Efficiency'] + ['CEN1_BLR1_STEAM_GEN_HRLY','CEN1_BLR1_FUEL_CONS_HRLY','CEN1_1_boiler_Efficiency_prc_hourly']
+tagList = list(tag_df["dataTagId"])[startIdx:startIdx + 200]
 
-startDate = "2022/{}/{} {}:{}:{}".format(validMonth,currentDay,currentHour,last5Minute,currentSecond)
-endDate = "2022/{}/{} {}:{}:{}".format(validMonth,currentDay,currentHour,currentMinute,currentSecond)
-
-print(startDate,endDate)
-try:
-    startDate = datetime.datetime.strptime(startDate, '%Y/%m/%d %H:%M:%S')
-    endDate = datetime.datetime.strptime(endDate, '%Y/%m/%d %H:%M:%S')
-except ValueError:
-    startDate = "2022/{}/{} {}:{}:{}".format(6,28,currentHour,last5Minute,currentSecond)
-    endDate = "2022/{}/{} {}:{}:{}".format(6,28,currentHour,currentMinute,currentSecond)
-
-    startDate = datetime.datetime.strptime(startDate, '%Y/%m/%d %H:%M:%S')
-    endDate = datetime.datetime.strptime(endDate, '%Y/%m/%d %H:%M:%S')
-
-
-print(startDate,endDate)
-startTimestamp=time.mktime(startDate.timetuple())*1000
-endTimestamp=time.mktime(endDate.timetuple())*1000
-
-# tagList = ["CEN1_BLR1_SFR_stmflw","CEN1_BLR1_FUEL_CONS_HRLY","CEN1_BLR1_STEAM_GEN_HRLY"]
-tagList2 = ["CEN1_OverallEffGCV","CEN1_Direct_Boiler_Efficiency","CEN1_BOILER_LOAD","CEN1_PT2_7_SCALE_PV","CEN1_VFD_M3"]
+print("time frame",startDate,endDate)
 print("time frame",startTimestamp,endTimestamp)
-dataEx.dataExachangeHeating(tagList,startTimestamp,endTimestamp)
-dataEx.dataExachangeHeating(tagList2,startTimestamp,endTimestamp)
+
+def on_connect(client, userdata, flags, rc):
+    print("connrect to mqtt")
+
+def on_log(client, userdata, obj, buff):
+    print("log: " + str(buff))
+    pass
+
+def on_message(client, userdata, msg):
+    pass
+
+
+client = paho.Client()
+client.on_connect = on_connect
+client.on_message = on_message
+client.on_log = on_log
+try:
+    username = config["BROKER_USERNAME"]
+    password = config["BROKER_PASSWORD"]
+    client.username_pw_set(username=username, password=password)
+except:
+    pass
+
+client.connect(config["BROKER_ADDRESS"], 1883, 2800)
+
+dataEx.dataExachangeHeating(tagList,startTimestamp,endTimestamp,client,unitsId)
+print(time.time()*1000 - currentTimeStamp)

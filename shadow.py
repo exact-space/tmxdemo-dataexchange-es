@@ -11,19 +11,14 @@ import utils as ut
 import numpy as np
 import pandas as pd
 import timeseries as ts
-import app_config as cfg
-from flask_cors import CORS
 import paho.mqtt.client as mqtt
-from subprocess import Popen, PIPE
 from datetime import datetime, timedelta, date
-from flask import Flask, jsonify, request, abort
-from apscheduler.schedulers.background import BackgroundScheduler
 
+from dataExchangelmpl import dataEx,config
 
-config = cfg.getconfig()
 #loadTagLimit = config["loadTagLimit"]
 #loadBucketSize = config["loadBucketSize"]
-redis = redis.StrictRedis(host='vml-2',db=0)
+redis = redis.StrictRedis()
 
 # logging.basicConfig(filename='log/data-api/kairos.log', filemode='a', format='%(name)s - {%(pathname)s:%(lineno)d} %(levelname)s - %(message)s', level=logging.INFO)
 # log = logging.getLogger('werkzeug')
@@ -54,26 +49,32 @@ def getLastValues(taglist,end_absolute=0):
 
 
 _redis_data_ = {}
-cooling_df = getLastValues(["TJY_ABS_PMP_DO"])
+cooling_df = getLastValues(["TTE_STRN_SLN_CONC"])
 print(cooling_df)
 heating_df = getLastValues(["DUN_M24_T"])
-res = redis.set("62b4012d1bb30160b7ec85c9-shadow",cooling_df.loc[0,"time"])
+res = redis.set("62b4012d1bb30160b7ec85c9-shadow",float(cooling_df.loc[0,"time"]))
 print(res)
-res = redis.set("62b3f0ae1bb30160b7ec8385-shadow",heating_df.loc[0,"time"])
-print(res)
-
-wws_df = getLastValues(["WWS1_BL_01"])
-res = redis.set("63288a244512494172eb0cde-shadow",wws_df.loc[0,"time"])
+res = redis.set("62b3f0ae1bb30160b7ec8385-shadow",float(heating_df.loc[0,"time"]))
 print(res)
 
-chemicals_df = getLastValues(["SMR_CORROSION"])
+wws_df = getLastValues(["WWS3_K_101A_sts"])
+res = redis.set("63288a244512494172eb0cde-shadow",float(wws_df.loc[0,"time"]))
+print(res)
 
-res = redis.set("6328837c4512494172eb0c2d-shadow",chemicals_df.loc[0,"time"])
+chemicals_df = getLastValues(["SMR_TEMPERATURE"])
+
+res = redis.set("6328837c4512494172eb0c2d-shadow",float(chemicals_df.loc[0,"time"]))
+print(res)
+
+power_df = getLastValues(["YYM_11_TI_001D"])
+
+res = redis.set("65cdb12fd958e80007254cf3-shadow",float(power_df.loc[0,"time"]))
 print(res)
 
 try:
     print("shadow")
-    keys = ["62b3f0ae1bb30160b7ec8385-shadow","62b4012d1bb30160b7ec85c9-shadow","63288a244512494172eb0cde-shadow","6328837c4512494172eb0c2d-shadow"]
+    keys = ["62b3f0ae1bb30160b7ec8385-shadow","62b4012d1bb30160b7ec85c9-shadow","63288a244512494172eb0cde-shadow",
+            "6328837c4512494172eb0c2d-shadow","65cdb12fd958e80007254cf3-shadow"]
 
 # print(len(keys))
     if len(keys) <= 120:
@@ -84,9 +85,9 @@ try:
              value = float(redis.get(key))
           _redis_data_[key] = value
        print("req done")
-       print json.dumps(_redis_data_)
+       print(json.dumps(_redis_data_))
     else:
-       print json.dumps({}), 200
+       print(json.dumps({}), 200)
 except Exception as e:
     print('-----error----')
     print(e)

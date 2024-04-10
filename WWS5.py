@@ -1,6 +1,6 @@
 from dataExchangelmpl import dataEx,config
 
-unitsId = "61c4b51b515e2f6d59c00173"
+unitsId = "63288a244512494172eb0cde"
 dataEx = dataEx()
 # try:
     # dataEx.getLoginToken()
@@ -13,11 +13,11 @@ print(tag_df)
 # dataEx.dataExachangeCooling(taglist)
 # print(len(tag_df))
 for tag in range(0,len(tag_df)): 
-    if 'VDM' in tag_df.loc[tag,'dataTagId']:
+    if 'WWS' in tag_df.loc[tag,'dataTagId']:
         taglist = [tag_df.loc[tag,'dataTagId']]
         # taglist= ['CEN1_M24_R']
         print(taglist)
         try:
-            dataEx.dataExachangeCooling(taglist)
+            dataEx.dataExachangeWWSWithoutCSV(taglist)
         except:
             pass
