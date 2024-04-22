@@ -1,2 +1,3 @@
 #!/bin/bash
-cron && tail -f /src/log/shadow.log
+#cron && tail -f /src/log/shadow.log
+python index.py 
