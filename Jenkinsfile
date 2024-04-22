@@ -6,7 +6,7 @@ pipeline {
         APP_NAME = "tmxdemo-dataexchange-es"
     }
     stages {
-        stage("get scm") {i
+        stage("get scm") 
             steps {
                 checkout([$class: 'GitSCM',
                     branches: [[name: 'master']],
