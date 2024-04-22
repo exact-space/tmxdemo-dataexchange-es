@@ -6,10 +6,10 @@ pipeline {
         APP_NAME = "tmxdemo-dataexchange-es"
     }
     stages {
-        stage("get scm") 
+        stage("get scm") {
             steps {
                 checkout([$class: 'GitSCM',
-                    branches: [[name: 'master']],
+                    branches: [[name: 'main']],
                     userRemoteConfigs: [[url: 'git@github.com:exact-space/tmxdemo-dataexchange-es.git']]
                 ])
             }
@@ -39,7 +39,7 @@ pipeline {
                 sh "sudo docker push $registry/$APP_NAME:r1"
             }
         }    
-        stage('deploying to prod') {
+       /* stage('deploying to prod') {
             steps {
                 catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
                 timeout(time: 15, unit: 'MINUTES') {
@@ -83,7 +83,7 @@ pipeline {
                 }
             }
         }
-        }
+        } */
     }
     post {
         failure {
