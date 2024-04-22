@@ -41,7 +41,7 @@ print(PAGE_SIZE)
 
 path = r"./"
 
-tasks = ["powerMqtt.py"]
+tasks = ["powerMqtt.py","tbwesMqtt.py"]
 def foo(task):
     # print ('UNIT_ID='+' '+'BROKER_ADDRESS='+BROKER_ADDRESS+' python ' + path + task + ' > /tmp/log/'+'/data-calculation-b/'+task+'.log &2>1')
     #os.system('UNIT_ID='+' '+'BROKER_ADDRESS='+BROKER_ADDRESS+' python ' + path + task + ' > /tmp/log/'+'/data-calculation-b/'+task+'.log &2>1')
