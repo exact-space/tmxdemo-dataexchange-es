@@ -3,14 +3,14 @@ pipeline {
     environment {
         VERSION = "${env.BUILD_ID}"
         registry = "dev.exactspace.co"
-        APP_NAME = "TmxDemo-dataExchange-ES"
+        APP_NAME = "tmxdemo-dataexchange-es"
     }
     stages {
-        stage("get scm") {
+        stage("get scm") {i
             steps {
                 checkout([$class: 'GitSCM',
                     branches: [[name: 'master']],
-                    userRemoteConfigs: [[url: 'git@github.com:exact-space/TmxDemo-dataExchange-ES.git']]
+                    userRemoteConfigs: [[url: 'git@github.com:exact-space/tmxdemo-dataexchange-es.git']]
                 ])
             }
         }
