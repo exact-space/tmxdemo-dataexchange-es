@@ -1,0 +1,62 @@
+pipeline {
+    agent any  
+    environment {
+        VERSION = "${env.BUILD_ID}"
+        registry = "tmxedgelivepprodakscontainerregistry.azurecr.io"
+        APP_NAME = "tmxdemo-dataexchange-es"
+    }
+    stages {
+        stage("get scm") {
+            steps {
+                checkout([$class: 'GitSCM',
+                    branches: [[name: 'main']],
+                    userRemoteConfigs: [[url: 'git@github.com:exact-space/tmxdemo-dataexchange-es.git']]
+                ])
+            }
+        }
+        stage("cython compilation") {
+            steps {
+                sh "cython3 index.py --embed"
+            }
+        }
+        stage("loging in to registry for pull") {
+            steps {
+                sh " az acr login --name tmxedgelivepprodakscontainerregistry"
+            }
+        }
+        stage("building images") {
+            steps {
+                sh "docker build --rm --no-cache -t $APP_NAME:r1 -f Dockerfile-thermax ."
+            }
+        }
+        stage("tagging images-r1") {
+            steps {
+                sh "docker tag $APP_NAME:r1 $registry/$APP_NAME:r1"
+            }
+        }
+        stage("remove old docker image-r1") {
+            steps {
+                sh "docker image rm $APP_NAME:r1"
+            }
+        }
+        stage("loging in to registry") {
+            steps {
+                sh " az acr login --name tmxedgelivepprodakscontainerregistry"
+            }
+        }
+        stage("image push-r1") {
+            steps {
+                sh " docker push $registry/$APP_NAME:r1"
+            }
+        }
+        stage('deploying to thermax') {
+            steps {
+                catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
+                timeout(time: 15, unit: 'MINUTES') {
+                    httpRequest url: "http://10.212.127.196:3186/cicd/api/$APP_NAME", timeout: 900000
+                }
+            }
+        }
+        }
+    }
+}  

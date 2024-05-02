@@ -1,4 +1,4 @@
-FROM dev.exactspace.co/python3.8-base-es2:r1
+FROM tmxedgelivepprodakscontainerregistry.azurecr.io/python3.8-base-es2:r1
 RUN mkdir /src
 COPY powerMqtt.py /src/
 COPY tbwesMqtt.py /src/
