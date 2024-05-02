@@ -38,6 +38,8 @@ def on_message(client, userdata, msg):
 def on_connect(client, userdata, flags, rc):
     client.subscribe(f"u/{sourceUnitsId}/+/r")
 
+
+
 def on_message2(client, userdata, msg):
     # print(msg.payload)
     body = json.loads(msg.payload)

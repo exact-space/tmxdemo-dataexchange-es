@@ -22,6 +22,7 @@ destUnitId = "66223c4696d5a20006ef7f67"
 sourcePrefix  = ""
 destPrefix = "VGA_"
 def on_message(client, userdata, msg):
+    return
     # client2.publish(msg.topic,msg.payload)
     topic = msg.topic.replace(sourceUnitsId,destUnitId)
     topic = topic.split("/")

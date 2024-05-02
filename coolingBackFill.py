@@ -1,8 +1,8 @@
 from dataExchangelmpl import dataEx,config
 
-unitsId = "62ff525f0053c325ccf27a1d"
-sourcePrefix = "SIK"
-destPrefix = "YYM"
+unitsId = "62e9106d75c9b4657aebc8fb"
+sourcePrefix = ""
+destPrefix = "VGA_"
 dataEx = dataEx()
 # try:
     # dataEx.getLoginToken()
@@ -10,7 +10,20 @@ dataEx = dataEx()
     # dataEx.getLoginToken()
 
 tag_df = dataEx.getTagmeta(unitsId)
-# print(tag_df)
+print(tag_df)
+# for tag in range(0,len(tag_df)): 
+#     taglist = [tag_df.loc[tag,'dataTagId']]
+#     # taglist= ['VDM_CHW_OUT_TEMP']
+#     # print(taglist)
+#     try:
+#         df = dataEx.getLastValues(taglist)
+#         if not len(df):
+#             print(taglist)
+#         # print(df)
+#         # break
+#     except Exception as e:
+#         print(e)       
+        
 
 # taglist= ['CEN1_M24_R']
 # dataEx.dataExachangeCooling(taglist)

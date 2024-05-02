@@ -18,7 +18,7 @@ from dataExchangelmpl import dataEx,config
 
 #loadTagLimit = config["loadTagLimit"]
 #loadBucketSize = config["loadBucketSize"]
-redis = redis.StrictRedis()
+redis = redis.StrictRedis(host='vml-2', db=0)
 
 # logging.basicConfig(filename='log/data-api/kairos.log', filemode='a', format='%(name)s - {%(pathname)s:%(lineno)d} %(levelname)s - %(message)s', level=logging.INFO)
 # log = logging.getLogger('werkzeug')

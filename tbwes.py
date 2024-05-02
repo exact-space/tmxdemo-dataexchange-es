@@ -11,29 +11,40 @@ from datetime import timedelta
 import numpy as np
 #import timeseries as ts
 # import app_config as cfg
-import paho.mqtt.client as paho
+import paho.mqtt.client as mqtt
 import math as m
 # config = cfg.getconfig()
 global cross_tags
 from dataExchangelmpl import dataEx,config
 from apscheduler.schedulers.background import BackgroundScheduler
 
-
+ 
+def on_message(client, userdata, msg):
+    # client2.publish(msg.topic,msg.payload)
+    pass
+   
 def on_connect(client, userdata, flags, rc):
-    print("connrect to mqtt")
+    pass
+
 
 def on_log(client, userdata, obj, buff):
     print("log: " + str(buff))
-    pass
+    # pass
 
-def on_message(client, userdata, msg):
-    pass
-
-
-client = paho.Client()
+BROKER_ADDRESS = config["BROKER_ADDRESS"] 
+print(BROKER_ADDRESS)
+client = mqtt.Client()
 client.on_connect = on_connect
 client.on_message = on_message
 client.on_log = on_log
+
+port = os.environ.get("Q_PORT")
+if not port:
+    port = 1883
+else:
+    port = int(port)
+print("Running port", port)
+
 try:
     username = config["BROKER_USERNAME"]
     password = config["BROKER_PASSWORD"]
@@ -41,16 +52,22 @@ try:
 except:
     pass
 
-client.connect(config["BROKER_ADDRESS"], 1883, 2800)
+client.connect(config['BROKER_ADDRESS'], port, 60)
 
-sourceUnitsId = "62ff525f0053c325ccf27a1d"
-destUnitId = "65cdb12fd958e80007254cf3"
-sourcePredix = "SIK"
-destPrefix = "YYM"
+unitsId = "62e9106d75c9b4657aebc8fb"
+destUnitId = "66223c4696d5a20006ef7f67"
 dataEx = dataEx()
-dataEx.mainFuncPower(sourceUnitsId,destUnitId,client,sourcePredix,destPrefix)
+dataEx.mainFuncTbwes(unitsId,client,destUnitId)
+# dataEx.mainFuncTbwesBackFill(unitsId,client,destUnitId)
+# try:
+    # dataEx.getLoginToken()
+# except:
+    # dataEx.getLoginToken()
+
 
 scheduler = BackgroundScheduler()
-scheduler.add_job(func=dataEx.mainFuncPower,args=[sourceUnitsId,destUnitId,client,sourcePredix,destPrefix], trigger="interval", seconds=60*5,max_instances=2)
+scheduler.add_job(func=dataEx.mainFuncTbwes,args=[unitsId,client,destUnitId], trigger="interval", seconds=60*5,max_instances=1)
 scheduler.start()
 client.loop_forever(retry_first_connection=True)
+
+

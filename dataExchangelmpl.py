@@ -4,7 +4,9 @@ import warnings
 import requests
 from requests.exceptions import Timeout
 import pandas as pd
+pd.options.mode.chained_assignment = None
 import json
+import random
 import os
 import time
 import datetime
@@ -23,19 +25,43 @@ import grequests
 config = cfg.getconfig()
 import sys
 import traceback
+import redis
+
 
 def tr():
     print(traceback.format_exc())
 
 
+redis = redis.StrictRedis(host='vml-2', db=0)
+
 class dataEx:
     def __init__(self):
-        self.url_kairos = "https://pulse.thermaxglobal.com/kairosapi/api/v1/datapoints/query"
+        self.url_kairos = config["api"]["query"]
         self.post_url = config["api"]["datapoints"] 
         print(self.post_url)
         self.now = int(time.time()*1000) 
-        
-        
+    
+
+    def lastUpdateValueRedis(self,unitId,tag):
+        try:
+            df = self.getLastValues([tag])
+            res = redis.set(unitId+"-shadow",float(df.loc[0,"time"]))
+            print("redis values:",res,redis.get(unitId+"-shadow"))
+            
+        except:
+            tr()
+    def getUnitdetails(self,unitsId):
+        query = {"id":unitsId}
+        urlQuery = config["api"]["meta"]+'/units/?filter={"where":' + json.dumps(query) + '}'
+        response = requests.get(urlQuery)
+        if(response.status_code==200):
+            unitDetails = json.loads(response.content)
+            for details in unitDetails:
+                siteId = details["siteId"]                
+                return siteId
+        else:
+            print("No unita....")
+
     def getDateFromTimeStamp(self,timestamp):
         return datetime.datetime.fromtimestamp(timestamp/1000)
         
@@ -224,9 +250,24 @@ class dataEx:
             
         }
     #     print(json.dumps(query,indent=4))
-        res=requests.post(url=self.url_kairos, json=query)
+        try:
+            res=requests.post(url=self.url_kairos, json=query)
+        except:
+            time.sleep(5)
+            res=requests.post(url=self.url_kairos, json=query)
+
         if res.status_code != 200:
             print(res.status_code)
+            time.sleep(5)
+            try:
+                res=requests.post(url=self.url_kairos, json=query)
+            except:
+                time.sleep(5)
+                res=requests.post(url=self.url_kairos, json=query)
+
+            print(res.status_code)
+
+
         values=json.loads(res.content)
         finalDF = pd.DataFrame()
         for i in values["queries"]:
@@ -455,9 +496,9 @@ class dataEx:
     def backfillCooling(self,taglist,sourcePrefix,destPrefix):
         
         print(taglist,"trying for backfill")
-        et = time.time() * 1000
-        # et = 1691519400000
-        st = et - 1*1000*60*60*24*7
+        et = time.time() * 1000 - 1*1000*60*60*24*3
+        # et = 1705881600000
+        st = 1698796800000
         df = self.getValuesV2(taglist,st,et)
         
 
@@ -468,10 +509,12 @@ class dataEx:
         
         if len(df) > 0:
             #yes, prefix at source is SIK_ , demo has YYM_
-            new_tag = taglist[0].replace(sourcePrefix,destPrefix)
+            # new_tag = taglist[0].replace(sourcePrefix,destPrefix)
+            new_tag = destPrefix +  taglist[0]
             print(new_tag)
             
             self.deleteKairos([new_tag],st,et)
+            
             dataPointsReq = 5000
             for i in range(0,len(df),dataPointsReq):
                 new_df =  df[["time",taglist[0]]][i:i+dataPointsReq]
@@ -655,8 +698,222 @@ class dataEx:
             print(miniList)
             miniList = self.noDataTags[ss:ss+stepSize]
             self.dataexHeating(miniList,startTime,endTime,True)
+
+                
+    def dataexTbwes(self,miniList,startTime,endTime,noTag=False):
+        exceptionsList = []
+        if not noTag:
+            maindf = self.getValuesV2(miniList,startTime,endTime)
+            print(maindf)
+
+        if noTag:
+            lower_bound = 1702319400000
+            upper_bound = 1702405800000
+
+            # Generate a random integer within the specified range
+            # random_int = random.randint(lower_bound, upper_bound)
+            et = random.randint(lower_bound, upper_bound)
+            st = et - 1*1000*60*10
+            maindf = self.getValuesV2(miniList,st,et)[0:6]
+            if len(maindf) == 0:
+                df_LV = self.getLastValues(miniList)
+                # print(df_LV)
+                if len(df_LV) > 0:
+                    # print(self.now)
+                    endTime = df_LV.loc[0,'time'] + 1*1000*60*5
+                    startTime = endTime - 1*1000*60*20
+                    maindf = self.getValuesV2(miniList,startTime,endTime)
+                    maindf.dropna(inplace=True)
+                    maindf = maindf[maindf[miniList[0]]!='NaN']
+                maindf.reset_index(drop=True,inplace=True)
+
+        maindf.rename(columns={"index":"time"},inplace=True)
+        print(maindf)
+        for tag in miniList:
+            try:
+                try:
+                    var = "time" 
+                    df = maindf[["time",tag]]
+                except:
+                    var = "Time"
+                    df = maindf[["Time",tag]]
+                    
+                df.dropna(how="any",inplace=True)
+                # print(df)
+      
+                if "_WTHR_TEMP_degC" in tag:
+                    siteId = self.getUnitdetails(self.destUnitId)
+                    new_tag = siteId  + "_WTHR_TEMP_degC"
+                    print("weather tag",new_tag)
+                else:
+                    new_tag = "VGA_" + tag
+                # df.sort_values(by="time",inplace=True,ascending=False)
+                # df = df.sort_values(by=var, ascending=False, ignore_index=True)
+                # df.reset_index(inplace=True,drop=True)
+                
+                # df['Date']=pd.to_datetime(df['time'],unit='ms',errors='coerce')
+                if len(df) == 0 and not noTag :
+                    print("No data for ", tag)
+                    self.noDataTags.append(tag)
+                if len(df)!= 0:
+                    # if (not df[tag].iloc[-1]) and (tag not in self.noDataTags):
+                    #     # print("having only zeros" * 100)
+                    #     self.noDataTags.append(tag)
+                    #     #return
+                    # if (tag in exceptionsList) and (not df[tag].iloc[-1]):
+                    #     print("in exc list")
+                    #     df = self.getValuesV2([tag],1678645800000,1678645800000 + 1*1000*60*5)
+                        #return
+                    # df.sort_values(bya="time",inplace=True,ascending=False)
+                    df = df.sort_values(by=var, ascending=False, ignore_index=True)
+                    df.reset_index(inplace=True,drop=True)
+                    for i in df.index:
+                        df.at[i, 'newTime'] = self.now - i*1000*60
+                    df['newDate']=pd.to_datetime(df['newTime'],unit='ms')
+                        
+                    post_url = config["api"]["datapoints"]
+                    post_array = []
+                    for i in range(0,len(df)):
+                        if df.loc[i,tag] != None:
+                            post = [int(df.loc[i,'newTime']),float(df.loc[i,tag])]
+                            post_array.append(post)
+                            
+                    post_body = [{"name":new_tag,"datapoints":post_array,"tags": {"type":"derived"}}]
+                    print(json.dumps(post_body))
+                    if self.unitsId:
+                        print("publishing on mqtt")
+                        topicLine = f"u/{self.unitsId}/{new_tag}/r"
+                        pb = {"v":post_array[0][1],"t":post_array[0][0]}
+                        self.client.publish(topicLine,json.dumps(pb))
+
+
+                    try:
+                        res1 = requests.post(post_url,json=post_body)
+                        print("`"*30,str(new_tag),"`"*30)
+                        print("`"*30,str(res1.status_code),"`"*30)
+                    except:
+                        print(traceback.format_exc())
+                    # print(post_body)
+            except:
+                print(traceback.format_exc())                
+        
+           
+    def dataExachangeTbwes(self,unitsId,tagList,startTime,endTime,client = False):
+
+        if unitsId:
+            self.client = client
+            self.unitsId = unitsId
+
+        stepSize = 20
+        self.noDataTags = []
+        for ss in range(0,len(tagList),stepSize):
+            miniList = tagList[ss:ss+stepSize]
+            self.dataexTbwes(miniList,startTime,endTime)
             
+        for ss in range(0,len(self.noDataTags),stepSize):
+            print(miniList)
+            miniList = self.noDataTags[ss:ss+stepSize]
+            self.dataexTbwes(miniList,startTime,endTime,True)
+    
+    
+    def getValidMonthAndYearTbwes(self,currentMonth):
+        """
+        data should be mapped between 1.11.2023 to 29.02.2024.
+        """
+        x = int(((currentMonth-0.1)//2))
+        x1 = (((currentMonth + 1-0.1)//2))
+        if x % 2 == 0 and x == x1:
+            validMonth = 1
+            validYear = 2024
+        elif x % 2 == 0 and x != x1:
+            validMonth = 2
+            validYear = 2024
             
+        elif x % 2 != 0 and x == x1:
+            validMonth = 11
+            validYear = 2023
+            
+        else:
+            validMonth = 12
+            validYear = 2023
+        
+        return validMonth,validYear
+
+
+    def mainFuncTbwes(self,unitsId,client,destUnitId):
+        self.destUnitId = destUnitId
+        currentTimeStamp = int(time.time()*1000)
+
+
+        currentTime = datetime.datetime.now()
+        currentMonth = currentTime.month 
+        currentQuarter = (currentMonth-1)//3 + 1
+        currentDay = currentTime.day 
+        currentHour = currentTime.hour
+        currentMinute =  currentTime.minute
+        currentSecond = currentTime.second
+        last5Minute = abs(currentMinute - 5)
+        validMonth,validYear = self.getValidMonthAndYearTbwes(currentMonth)
+
+        startDate = "{}/{}/{} {}:{}:{}".format(validYear,validMonth,currentDay,currentHour,last5Minute,currentSecond)
+        endDate = "{}/{}/{} {}:{}:{}".format(validYear,validMonth,currentDay,currentHour,currentMinute,currentSecond)
+        startDate = datetime.datetime.strptime(startDate, '%Y/%m/%d %H:%M:%S')
+        endDate = datetime.datetime.strptime(endDate, '%Y/%m/%d %H:%M:%S')
+        print(startDate,endDate)
+
+        startTimestamp=time.mktime(startDate.timetuple())*1000
+        endTimestamp=time.mktime(endDate.timetuple())*1000
+        self.now = time.time() * 1000
+
+        tag_df = self.getTagmeta(unitsId)
+        tagList = list(tag_df["dataTagId"])
+        self.dataExachangeTbwes(unitsId,tagList,startTimestamp,endTimestamp,client)
+
+        self.lastUpdateValueRedis(self.destUnitId,tagList[0])
+
+          
+    
+
+    def mainFuncTbwesBackFill(self,unitsId,client,destUnitId):
+        print("Back filling")
+        self.destUnitId = destUnitId
+        currentTimeStamp = int(time.time()*1000)
+
+        
+        currentTime = datetime.datetime(2024, 4, 30,9,24,00)  - datetime.timedelta(hours = 5,minutes=30)
+
+        currentMonth = currentTime.month 
+        currentQuarter = (currentMonth-1)//3 + 1
+        currentDay = currentTime.day 
+        currentHour = currentTime.hour
+        currentMinute =  currentTime.minute
+        currentSecond = currentTime.second
+        last5Minute = abs(currentMinute - 5)
+        validMonth,validYear = self.getValidMonthAndYearTbwes(currentMonth)
+
+    
+        startDate = "{}/{}/{} {}:{}:{}".format(validYear,validMonth,currentDay,currentHour,last5Minute,currentSecond)
+        endDate = "{}/{}/{} {}:{}:{}".format(validYear,validMonth,currentDay,currentHour,currentMinute,currentSecond)
+        startDate = datetime.datetime.strptime(startDate, '%Y/%m/%d %H:%M:%S')
+        endDate = datetime.datetime.strptime(endDate, '%Y/%m/%d %H:%M:%S')
+        print(startDate,endDate)
+
+        startTimestamp=time.mktime(startDate.timetuple())*1000
+        endTimestamp=time.mktime(endDate.timetuple())*1000
+        self.now = time.mktime(currentTime.timetuple())*1000
+
+        for i in range(100):
+            print("Back filling")
+            tag_df = self.getTagmeta(unitsId)
+            tagList = list(tag_df["dataTagId"])
+            self.dataExachangeTbwes(unitsId,tagList,startTimestamp,endTimestamp,client)
+            endTimestamp = startTimestamp
+            startTimestamp = endTimestamp - 1*1000*60*6
+            self.now = self.now - 1*1000*60*6
+        # self.lastUpdateValueRedis(self.destUnitId,tagList[0])
+
+   
+
     def downloadingFileMultipleFiles(self, fileNames):
         urls = []
         for file in fileNames:
@@ -682,3 +939,170 @@ class dataEx:
                 os.remove(file)
             except:
                 pass
+    
+
+             
+    def dataexPower(self,miniList,startTime,endTime,noTag=False):
+        exceptionsList = []
+        if not noTag:
+            maindf = self.getValuesV2(miniList,startTime,endTime)
+            print(maindf)
+        if noTag:
+            
+            lower_bound = 1710095400000
+            upper_bound = 1711305000000
+
+            et = random.randint(lower_bound, upper_bound)
+            st = et - 1*1000*60*10
+            maindf = self.getValuesV2(miniList,st,et)
+            if len(maindf) == 0:
+                df_LV = self.getLastValues(miniList)
+                # print(df_LV)
+                if len(df_LV) > 0:
+                    # print(self.now)
+                    endTime = df_LV.loc[0,'time'] + 1*1000*60*5
+                    startTime = endTime - 1*1000*60*20
+                    maindf = self.getValuesV2(miniList,startTime,endTime)
+                    maindf.dropna(inplace=True)
+                    maindf = maindf[maindf[miniList[0]]!='NaN']
+                maindf.reset_index(drop=True,inplace=True)
+        maindf.rename(columns={"index":"time"},inplace=True)
+        print(maindf)
+        for tag in miniList:
+            
+            try:
+                try:
+                    var = "time" 
+                    df = maindf[["time",tag]]
+                except:
+                    var = "Time"
+                    df = maindf[["Time",tag]]
+                    
+                df.dropna(how="any",inplace=True)
+                # print(df)
+      
+                    
+                new_tag = tag.replace(self.sourcePrefix,self.destPrefix)
+                # df.sort_values(by="time",inplace=True,ascending=False)
+                # df = df.sort_values(by=var, ascending=False, ignore_index=True)
+                # df.reset_index(inplace=True,drop=True)
+                
+                # df['Date']=pd.to_datetime(df['time'],unit='ms',errors='coerce')
+                if len(df) == 0 and not noTag :
+                    print("No data for ", tag)
+                    self.noDataTags.append(tag)
+                if len(df)!= 0:
+                    # if (not df[tag].iloc[-1]) and (tag not in self.noDataTags):
+                    #     # print("having only zeros" * 100)
+                    #     self.noDataTags.append(tag)
+                    #     #return
+                    if (tag in exceptionsList) and (not df[tag].iloc[-1]):
+                        print("in exc list")
+                        df = self.getValuesV2([tag],1678645800000,1678645800000 + 1*1000*60*5)
+                        #return
+                    # df.sort_values(bya="time",inplace=True,ascending=False)
+                    df = df.sort_values(by=var, ascending=False, ignore_index=True)
+                    df.reset_index(inplace=True,drop=True)
+                    for i in df.index:
+                        df.at[i, 'newTime'] = self.now - i*1000*60
+                    df['newDate']=pd.to_datetime(df['newTime'],unit='ms')
+                        
+                    post_url = config["api"]["datapoints"]
+                    post_array = []
+                    for i in range(0,len(df)):
+                        if df.loc[i,tag] != None:
+                            post = [int(df.loc[i,'newTime']),float(df.loc[i,tag])]
+                            post_array.append(post)
+                            
+                    post_body = [{"name":new_tag,"datapoints":post_array,"tags": {"type":"derived"}}]
+
+                    if self.unitsId:
+                        topicLine = f"u/{self.destUnitId}/{new_tag}/r"
+                        pb = {"v":post_array[0][1],"t":post_array[0][0]}
+                        self.client.publish(topicLine,json.dumps(pb))
+
+                        
+                    try:
+                        res1 = requests.post(post_url,json=post_body)
+                        print("`"*30,str(new_tag),"`"*30)
+                        print("`"*30,str(res1.status_code),"`"*30)
+                    except:
+                        print(traceback.format_exc())
+                    # print(post_body)
+            except:
+                print(traceback.format_exc())                
+   
+
+            
+    def dataExachangePower(self,tagList,startTime,endTime,client = False,unitsId=False):
+
+        if unitsId:
+            self.client = client
+            self.unitsId = unitsId
+
+        stepSize = 20
+        self.noDataTags = []
+        for ss in range(0,len(tagList),stepSize):
+            miniList = tagList[ss:ss+stepSize]
+            self.dataexPower(miniList,startTime,endTime)
+            
+        for ss in range(0,len(self.noDataTags),stepSize):
+            print(miniList)
+            miniList = self.noDataTags[ss:ss+stepSize]
+            self.dataexPower(miniList,startTime,endTime,True)
+
+    
+
+
+    def mainFuncPower(self,sourceUnitId,destUnitId,client,sourcePrefix,destPrefix):
+        try:
+            self.sourceUnitId = sourceUnitId
+            self.destUnitId = destUnitId
+            self.sourcePrefix = sourcePrefix
+            self.destPrefix = destPrefix
+
+            currentTimeStamp = int(time.time()*1000)
+
+
+            currentTime = datetime.datetime.now()
+            # currentMonth = currentTime.month 
+            # currentQuarter = (currentMonth-1)//3 + 1
+            currentDay = currentTime.day 
+            currentHour = currentTime.hour
+            currentMinute =  currentTime.minute
+            currentSecond = currentTime.second
+            last5Minute = abs(currentMinute - 5)
+            # validMonth = (currentMonth - (currentQuarter-1)*3)
+            validMonth = 3
+
+            startDate = "2024/{}/{} {}:{}:{}".format(validMonth,currentDay,currentHour,last5Minute,currentSecond)
+            endDate = "2024/{}/{} {}:{}:{}".format(validMonth,currentDay,currentHour,currentMinute,currentSecond)
+
+            print(startDate,endDate)
+            try:
+                startDate = datetime.datetime.strptime(startDate, '%Y/%m/%d %H:%M:%S')
+                endDate = datetime.datetime.strptime(endDate, '%Y/%m/%d %H:%M:%S')
+            except ValueError:
+                startDate = "2023/{}/{} {}:{}:{}".format(6,28,currentHour,last5Minute,currentSecond)
+                endDate = "2023/{}/{} {}:{}:{}".format(6,28,currentHour,currentMinute,currentSecond)
+                
+                startDate = datetime.datetime.strptime(startDate, '%Y/%m/%d %H:%M:%S')
+                endDate = datetime.datetime.strptime(endDate, '%Y/%m/%d %H:%M:%S')
+
+
+            print(startDate,endDate)
+            startTimestamp=time.mktime(startDate.timetuple())*1000
+            endTimestamp=time.mktime(endDate.timetuple())*1000
+
+            tag_df = self.getTagmeta(sourceUnitId)
+
+            tagList = list(tag_df["dataTagId"])
+
+            print("time frame",startDate,endDate)
+            print("time frame",startTimestamp,endTimestamp)
+
+            self.dataExachangePower(tagList,startTimestamp,endTimestamp,client,sourceUnitId)
+            self.lastUpdateValueRedis(self.destUnitId,"YYM_21_MW_001")
+
+        except:
+            tr()
