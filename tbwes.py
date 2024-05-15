@@ -57,8 +57,8 @@ client.connect(config['BROKER_ADDRESS'], port, 60)
 unitsId = "62e9106d75c9b4657aebc8fb"
 destUnitId = "66223c4696d5a20006ef7f67"
 dataEx = dataEx()
-# dataEx.mainFuncTbwes(unitsId,client,destUnitId)
-dataEx.mainFuncTbwesBackFill(unitsId,client,destUnitId)
+dataEx.mainFuncTbwes(unitsId,client,destUnitId)
+# dataEx.mainFuncTbwesBackFill(unitsId,client,destUnitId)
 # try:
     # dataEx.getLoginToken()
 # except:
