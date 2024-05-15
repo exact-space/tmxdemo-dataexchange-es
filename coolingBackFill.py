@@ -10,7 +10,9 @@ dataEx = dataEx()
     # dataEx.getLoginToken()
 
 tag_df = dataEx.getTagmeta(unitsId)
+tag_df["newTag"] = "VGA_" + tag_df["dataTagId"]
 print(tag_df)
+
 # for tag in range(0,len(tag_df)): 
 #     taglist = [tag_df.loc[tag,'dataTagId']]
 #     # taglist= ['VDM_CHW_OUT_TEMP']
@@ -32,15 +34,20 @@ print(tag_df)
 
 for tag in range(0,len(tag_df)): 
     if sourcePrefix in tag_df.loc[tag,'dataTagId']:
-        taglist = [tag_df.loc[tag,'dataTagId']]
+        tag1 = tag_df.loc[tag,'dataTagId']
         # taglist= ['VDM_CHW_OUT_TEMP']
         # print(taglist)
-        try:
-            dataEx.backfillCooling(taglist,sourcePrefix,destPrefix)
-            # break
-        except Exception as e:
-            print(e)       
-        
+        lst = ["validload__","flagLOAD__"] + ["loadLw_","loadUp_","pred_"] + ["predUp_","predLw_","flagModel__"]
+        for i in lst:
+            taglist = [i + tag1]
+            new_tag = i + tag_df.loc[tag,'newTag']
+            print(taglist,new_tag)
+            try:
+                dataEx.backfillCooling(taglist,sourcePrefix,destPrefix,new_tag)
+                # break
+            except Exception as e:
+                print(e)       
+            
 
 tag_df = dataEx.getForms(unitsId)
 # print(tag_df)
@@ -52,11 +59,17 @@ tag_df = dataEx.getForms(unitsId)
 
 for tag in range(0,len(tag_df)): 
     if sourcePrefix in tag_df.loc[tag,'dataTagId']:
-        taglist = [tag_df.loc[tag,'dataTagId']]
+        tag1 = tag_df.loc[tag,'dataTagId']
         # taglist= ['VDM_CHW_OUT_TEMP']
         # print(taglist)
-        try:
-            dataEx.backfillCooling(taglist,sourcePrefix,destPrefix)
-            # break
-        except Exception as e:
-            print(e)  
+        lst = ["validload__","flagLOAD__"] + ["loadLw_","loadUp_","pred_"] + ["predUp_","predLw_","flagModel__"]
+        for i in lst:
+            taglist = [i + tag1]
+            new_tag = i + tag_df.loc[tag,'newTag']
+            print(taglist,new_tag)
+            try:
+                dataEx.backfillCooling(taglist,sourcePrefix,destPrefix,new_tag)
+                # break
+            except Exception as e:
+                print(e)       
+            

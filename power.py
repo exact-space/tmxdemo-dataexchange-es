@@ -20,7 +20,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 
 
 def on_connect(client, userdata, flags, rc):
-    print("connrect to mqtt")
+    print("connrect to mqtt",config["BROKER_ADDRESS"])
 
 def on_log(client, userdata, obj, buff):
     print("log: " + str(buff))
@@ -48,7 +48,7 @@ destUnitId = "65cdb12fd958e80007254cf3"
 sourcePredix = "SIK"
 destPrefix = "YYM"
 dataEx = dataEx()
-dataEx.mainFuncPower(sourceUnitsId,destUnitId,client,sourcePredix,destPrefix)
+# dataEx.mainFuncPower(sourceUnitsId,destUnitId,client,sourcePredix,destPrefix)
 
 scheduler = BackgroundScheduler()
 scheduler.add_job(func=dataEx.mainFuncPower,args=[sourceUnitsId,destUnitId,client,sourcePredix,destPrefix], trigger="interval", seconds=60*5,max_instances=2)

@@ -37,15 +37,27 @@ def updateTagmeta(postBody,id):
 d = dataEx()
 unitsId = "66223c4696d5a20006ef7f67"
 tag_dfDest,tagmetaDest = getTagmeta(unitsId)
+tag_dfDest = tag_dfDest[tag_dfDest["measureProperty"] == "Power"]
+tag_dfDest = tag_dfDest[tag_dfDest["measureType"] == "Apc"]
+tag_dfDest = json.loads(tag_dfDest.to_json(orient="records"))
+# unitsId = "62e9106d75c9b4657aebc8fb"
+# tag_df,tagmeta = getTagmeta(unitsId)
+# tagListSource = list(tag_df["dataTagId"])
+for tag in tag_dfDest:
+    tag["measureUnit"] = "KwHr"
+    updateTagmeta(tag,tag["id"])
+
+# for tag in tagmetaDest:
+#     if "VGA_7" in tag["dataTagId"]:
+#         newTag = tag["dataTagId"].replace("7f67_Tg_1","SCSSSKL_60_c8fb_1")
+#         tag["dataTagId"] = newTag
+#         updateTagmeta(tag,tag["id"])
 
 
-unitsId = "62e9106d75c9b4657aebc8fb"
-tag_df,tagmeta = getTagmeta(unitsId)
-tagListSource = list(tag_df["dataTagId"])
-
-for tag in tagmetaDest:
-    if "VGA_7" in tag["dataTagId"]:
-        newTag = tag["dataTagId"].replace("7f67_Tg_1","SCSSSKL_60_c8fb_1")
-        tag["dataTagId"] = newTag
-        updateTagmeta(tag,tag["id"])
+# for tag in tagmetaDest:
+#     if ("VGA_Applications" not in tag["dataTagId"]) and ("VGA_SCSSSKL_60_c8fb_1" not in  tag["dataTagId"]) and ("VGA_60_TPH" not in  tag["dataTagId"]) and ("state__" not in tag["dataTagId"]) and ("VGA_62e9106075c9b4657aebc8f9" not in tag["dataTagId"]):
+#         # print(tag["dataTagId"])
+#         url = config["api"]["meta"] + '/tagmeta/'  + tag["id"]
+#         res = requests.delete(url)
+#         print(res.status_code)
         

@@ -474,6 +474,7 @@ class dataEx:
             query = {}
             query["metrics"] = []
             for metric in taglist:
+                print(metric)
                 query["metrics"].append({"name":metric})
             
             query["start_absolute"] = startTime
@@ -493,12 +494,12 @@ class dataEx:
             
   
                 
-    def backfillCooling(self,taglist,sourcePrefix,destPrefix):
+    def backfillCooling(self,taglist,sourcePrefix,destPrefix,new_tag):
         
         print(taglist,"trying for backfill")
-        et = time.time() * 1000 - 1*1000*60*60*24*3
+        et = time.time() * 1000 
         # et = 1705881600000
-        st = 1698796800000
+        st = et - 1*1000*60*60*24*7
         df = self.getValuesV2(taglist,st,et)
         
 
@@ -510,7 +511,7 @@ class dataEx:
         if len(df) > 0:
             #yes, prefix at source is SIK_ , demo has YYM_
             # new_tag = taglist[0].replace(sourcePrefix,destPrefix)
-            new_tag = destPrefix +  taglist[0]
+            # new_tag = destPrefix +  taglist[0]
             print(new_tag)
             
             self.deleteKairos([new_tag],st,et)
@@ -782,7 +783,7 @@ class dataEx:
                     print(json.dumps(post_body))
                     if self.unitsId:
                         print("publishing on mqtt")
-                        topicLine = f"u/{self.unitsId}/{new_tag}/r"
+                        topicLine = f"u/{self.destUnitId}/{new_tag}/r"
                         pb = {"v":post_array[0][1],"t":post_array[0][0]}
                         self.client.publish(topicLine,json.dumps(pb))
 
@@ -880,7 +881,8 @@ class dataEx:
         currentTimeStamp = int(time.time()*1000)
 
         
-        currentTime = datetime.datetime(2024, 4, 30,9,24,00)  - datetime.timedelta(hours = 5,minutes=30)
+        currentTime = datetime.datetime(2024, 5, 7,11,28,00)  - datetime.timedelta(hours = 5,minutes=30)
+        currentTime = datetime.datetime(2024, 5, 8,11,50,00)  - datetime.timedelta(hours = 5,minutes=30)
 
         currentMonth = currentTime.month 
         currentQuarter = (currentMonth-1)//3 + 1
@@ -901,15 +903,19 @@ class dataEx:
         startTimestamp=time.mktime(startDate.timetuple())*1000
         endTimestamp=time.mktime(endDate.timetuple())*1000
         self.now = time.mktime(currentTime.timetuple())*1000
-
-        for i in range(100):
+        tag_df = self.getTagmeta(unitsId)
+        for i in range(10):
             print("Back filling")
-            tag_df = self.getTagmeta(unitsId)
             tagList = list(tag_df["dataTagId"])
+            newList = ["VGA_" + x  for x in tagList]
+            for i in range(0,len(newList),10):
+                self.deleteKairos(newList[i:i+10],startTimestamp,endTimestamp)
+
             self.dataExachangeTbwes(unitsId,tagList,startTimestamp,endTimestamp,client)
             endTimestamp = startTimestamp
             startTimestamp = endTimestamp - 1*1000*60*6
             self.now = self.now - 1*1000*60*6
+
         # self.lastUpdateValueRedis(self.destUnitId,tagList[0])
 
    
