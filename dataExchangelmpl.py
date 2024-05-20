@@ -307,7 +307,7 @@ class dataEx:
             # print(len(df),len(post_array))
             post_body = [{"name":new_tag,"datapoints":post_array,"tags": {"type":"derived"}}]
             res1 = requests.post(self.post_url,json=post_body)
-            # print(post_body)
+            print(post_body)
             print('*******************',res1.status_code,new_tag,'******************************')
             print(df)
         else:
@@ -918,7 +918,66 @@ class dataEx:
 
         # self.lastUpdateValueRedis(self.destUnitId,tagList[0])
 
-   
+    def mainFuncPowerBackFIll(self,unitsId,client,destUnitId,sourcePredix,destPrefix):
+        print("Back filling")
+
+        self.sourceUnitId = unitsId
+        self.unitsId = unitsId
+        self.client = client
+        self.destUnitId = destUnitId
+        self.sourcePrefix = sourcePredix
+        self.destPrefix = destPrefix
+        
+        self.destUnitId = destUnitId
+        currentTimeStamp = int(time.time()*1000)
+
+        
+        currentTime = datetime.datetime(2024, 5, 7,11,28,00)  - datetime.timedelta(hours = 5,minutes=30)
+        currentTime = datetime.datetime(2024, 5, 20,14,30,00)  - datetime.timedelta(hours = 5,minutes=30)
+
+        currentMonth = currentTime.month 
+        currentQuarter = (currentMonth-1)//3 + 1
+        currentDay = currentTime.day 
+        currentHour = currentTime.hour
+        currentMinute =  currentTime.minute
+        currentSecond = currentTime.second
+        if currentMinute > 5:
+            last5Minute = abs(currentMinute - 5)
+        else:
+            last5Minute = abs(55)
+            currentHour = currentHour -1 
+        # validMonth,validYear = self.getValidMonthAndYearTbwes(currentMonth)
+        validMonth = 3
+        validYear = 2024
+
+
+    
+        startDate = "{}/{}/{} {}:{}:{}".format(validYear,validMonth,currentDay,currentHour,currentMinute,currentSecond)
+        endDate = "{}/{}/{} {}:{}:{}".format(validYear,validMonth,currentDay,currentHour,last5Minute,currentSecond)
+        startDate = datetime.datetime.strptime(startDate, '%Y/%m/%d %H:%M:%S')
+        endDate = datetime.datetime.strptime(endDate, '%Y/%m/%d %H:%M:%S')
+        print(startDate,endDate)
+
+        startTimestamp=time.mktime(startDate.timetuple())*1000
+        endTimestamp=time.mktime(endDate.timetuple())*1000
+        self.now = time.mktime(currentTime.timetuple())*1000
+        tag_df = self.getTagmeta(unitsId)
+        print(startTimestamp,endTimestamp)
+
+        for i in range(720):
+            print("Back filling")
+            tagList = list(tag_df["dataTagId"])
+            # newList = [ x.replace(sourcePredix,destPrefix)  for x in tagList if sourcePredix in x]
+            # for i in range(0,len(newList),10):
+            #     et = int(time.time()*1000)
+            #     st = et - 1*1000*60*60*3
+            #     self.deleteKairos(newList[i:i+10],st,et)
+            
+            self.dataExachangePower(tagList,startTimestamp,endTimestamp,client)
+            endTimestamp = startTimestamp
+            startTimestamp = endTimestamp - 1*1000*60*6
+            self.now = self.now - 1*1000*60*6
+
 
     def downloadingFileMultipleFiles(self, fileNames):
         urls = []
@@ -1030,6 +1089,7 @@ class dataEx:
                         
                     try:
                         res1 = requests.post(post_url,json=post_body)
+                        print("posting on",post_url)
                         print("`"*30,str(new_tag),"`"*30)
                         print("`"*30,str(res1.status_code),"`"*30)
                     except:
@@ -1050,6 +1110,7 @@ class dataEx:
         self.noDataTags = []
         for ss in range(0,len(tagList),stepSize):
             miniList = tagList[ss:ss+stepSize]
+            print(startTime,endTime)
             self.dataexPower(miniList,startTime,endTime)
             
         for ss in range(0,len(self.noDataTags),stepSize):
@@ -1067,8 +1128,8 @@ class dataEx:
             self.sourcePrefix = sourcePrefix
             self.destPrefix = destPrefix
 
-            currentTimeStamp = int(time.time()*1000)
-
+            currentTimeStamp = self.now = int(time.time()*1000)
+            
 
             currentTime = datetime.datetime.now()
             # currentMonth = currentTime.month 
@@ -1077,7 +1138,11 @@ class dataEx:
             currentHour = currentTime.hour
             currentMinute =  currentTime.minute
             currentSecond = currentTime.second
-            last5Minute = abs(currentMinute - 5)
+            if currentMinute > 5:
+                last5Minute = abs(currentMinute - 5)
+            else:
+                last5Minute = abs(60 - currentMinute)
+                currentHour = currentHour -1 
             # validMonth = (currentMonth - (currentQuarter-1)*3)
             validMonth = 3
 
@@ -1107,7 +1172,10 @@ class dataEx:
             print("time frame",startDate,endDate)
             print("time frame",startTimestamp,endTimestamp)
 
-            self.dataExachangePower(tagList,startTimestamp,endTimestamp,client,sourceUnitId)
+            if startTimestamp > endTimestamp:
+                self.dataExachangePower(tagList,endTimestamp,startTimestamp,client,sourceUnitId)
+            else:
+                self.dataExachangePower(tagList,startTimestamp,endTimestamp,client,sourceUnitId)
             self.lastUpdateValueRedis(self.destUnitId,"YYM_21_MW_001")
 
         except:
