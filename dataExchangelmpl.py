@@ -933,11 +933,12 @@ class dataEx:
 
         
         currentTime = datetime.datetime(2024, 5, 7,11,28,00)  - datetime.timedelta(hours = 5,minutes=30)
-        currentTime = datetime.datetime(2024, 5, 20,14,30,00)  - datetime.timedelta(hours = 5,minutes=30)
+        currentTime = datetime.datetime(2024, 5, 30,10,00,00)  - datetime.timedelta(hours = 5,minutes=30)
 
         currentMonth = currentTime.month 
         currentQuarter = (currentMonth-1)//3 + 1
         currentDay = currentTime.day 
+        # currentDay = 25
         currentHour = currentTime.hour
         currentMinute =  currentTime.minute
         currentSecond = currentTime.second
@@ -952,7 +953,7 @@ class dataEx:
 
 
     
-        startDate = "{}/{}/{} {}:{}:{}".format(validYear,validMonth,currentDay,currentHour,currentMinute,currentSecond)
+        startDate = "{}/{}/{} {}:{}:{}".format(validYear,validMonth,currentDay - 1 ,currentHour,currentMinute,currentSecond)
         endDate = "{}/{}/{} {}:{}:{}".format(validYear,validMonth,currentDay,currentHour,last5Minute,currentSecond)
         startDate = datetime.datetime.strptime(startDate, '%Y/%m/%d %H:%M:%S')
         endDate = datetime.datetime.strptime(endDate, '%Y/%m/%d %H:%M:%S')
@@ -964,7 +965,7 @@ class dataEx:
         tag_df = self.getTagmeta(unitsId)
         print(startTimestamp,endTimestamp)
 
-        for i in range(720):
+        for i in range(10):
             print("Back filling")
             tagList = list(tag_df["dataTagId"])
             # newList = [ x.replace(sourcePredix,destPrefix)  for x in tagList if sourcePredix in x]
@@ -973,10 +974,14 @@ class dataEx:
             #     st = et - 1*1000*60*60*3
             #     self.deleteKairos(newList[i:i+10],st,et)
             
-            self.dataExachangePower(tagList,startTimestamp,endTimestamp,client)
+            # self.dataExachangePower(tagList,startTimestamp,endTimestamp,client)
+            if startTimestamp > endTimestamp:
+                self.dataExachangePower(tagList,endTimestamp,startTimestamp,client)
+            else:
+                self.dataExachangePower(tagList,startTimestamp,endTimestamp,client)
             endTimestamp = startTimestamp
-            startTimestamp = endTimestamp - 1*1000*60*6
-            self.now = self.now - 1*1000*60*6
+            startTimestamp = endTimestamp - 1*1000*60*60*24
+            self.now = self.now -  1*1000*60*60*24
 
 
     def downloadingFileMultipleFiles(self, fileNames):
@@ -1029,75 +1034,78 @@ class dataEx:
                     startTime = endTime - 1*1000*60*20
                     maindf = self.getValuesV2(miniList,startTime,endTime)
                     maindf.dropna(inplace=True)
-                    maindf = maindf[maindf[miniList[0]]!='NaN']
+                    maindf.reset_index(drop=True,inplace=True)
+                    # maindf = maindf[maindf[miniList[0]]!='NaN']
                 maindf.reset_index(drop=True,inplace=True)
         maindf.rename(columns={"index":"time"},inplace=True)
         print(maindf)
         for tag in miniList:
-            
-            try:
+            if self.sourcePrefix not in tag:
+                pass
+            else:
                 try:
-                    var = "time" 
-                    df = maindf[["time",tag]]
-                except:
-                    var = "Time"
-                    df = maindf[["Time",tag]]
-                    
-                df.dropna(how="any",inplace=True)
-                # print(df)
-      
-                    
-                new_tag = tag.replace(self.sourcePrefix,self.destPrefix)
-                # df.sort_values(by="time",inplace=True,ascending=False)
-                # df = df.sort_values(by=var, ascending=False, ignore_index=True)
-                # df.reset_index(inplace=True,drop=True)
-                
-                # df['Date']=pd.to_datetime(df['time'],unit='ms',errors='coerce')
-                if len(df) == 0 and not noTag :
-                    print("No data for ", tag)
-                    self.noDataTags.append(tag)
-                if len(df)!= 0:
-                    # if (not df[tag].iloc[-1]) and (tag not in self.noDataTags):
-                    #     # print("having only zeros" * 100)
-                    #     self.noDataTags.append(tag)
-                    #     #return
-                    if (tag in exceptionsList) and (not df[tag].iloc[-1]):
-                        print("in exc list")
-                        df = self.getValuesV2([tag],1678645800000,1678645800000 + 1*1000*60*5)
-                        #return
-                    # df.sort_values(bya="time",inplace=True,ascending=False)
-                    df = df.sort_values(by=var, ascending=False, ignore_index=True)
-                    df.reset_index(inplace=True,drop=True)
-                    for i in df.index:
-                        df.at[i, 'newTime'] = self.now - i*1000*60
-                    df['newDate']=pd.to_datetime(df['newTime'],unit='ms')
-                        
-                    post_url = config["api"]["datapoints"]
-                    post_array = []
-                    for i in range(0,len(df)):
-                        if df.loc[i,tag] != None:
-                            post = [int(df.loc[i,'newTime']),float(df.loc[i,tag])]
-                            post_array.append(post)
-                            
-                    post_body = [{"name":new_tag,"datapoints":post_array,"tags": {"type":"derived"}}]
-
-                    if self.unitsId:
-                        topicLine = f"u/{self.destUnitId}/{new_tag}/r"
-                        pb = {"v":post_array[0][1],"t":post_array[0][0]}
-                        self.client.publish(topicLine,json.dumps(pb))
-
-                        
                     try:
-                        res1 = requests.post(post_url,json=post_body)
-                        print("posting on",post_url)
-                        print("`"*30,str(new_tag),"`"*30)
-                        print("`"*30,str(res1.status_code),"`"*30)
+                        var = "time" 
+                        df = maindf[["time",tag]]
                     except:
-                        print(traceback.format_exc())
-                    # print(post_body)
-            except:
-                print(traceback.format_exc())                
-   
+                        var = "Time"
+                        df = maindf[["Time",tag]]
+                        
+                    df.dropna(how="any",inplace=True)
+                    # print(df)
+        
+                        
+                    new_tag = tag.replace(self.sourcePrefix,self.destPrefix)
+                    # df.sort_values(by="time",inplace=True,ascending=False)
+                    # df = df.sort_values(by=var, ascending=False, ignore_index=True)
+                    # df.reset_index(inplace=True,drop=True)
+                    
+                    # df['Date']=pd.to_datetime(df['time'],unit='ms',errors='coerce')
+                    if len(df) == 0 and not noTag :
+                        print("No data for ", tag)
+                        self.noDataTags.append(tag)
+                    if len(df)!= 0:
+                        # if (not df[tag].iloc[-1]) and (tag not in self.noDataTags):
+                        #     # print("having only zeros" * 100)
+                        #     self.noDataTags.append(tag)
+                        #     #return
+                        if (tag in exceptionsList) and (not df[tag].iloc[-1]):
+                            print("in exc list")
+                            df = self.getValuesV2([tag],1678645800000,1678645800000 + 1*1000*60*5)
+                            #return
+                        # df.sort_values(bya="time",inplace=True,ascending=False)
+                        df = df.sort_values(by=var, ascending=False, ignore_index=True)
+                        df.reset_index(inplace=True,drop=True)
+                        for i in df.index:
+                            df.at[i, 'newTime'] = self.now - i*1000*60
+                        df['newDate']=pd.to_datetime(df['newTime'],unit='ms')   
+                            
+                        post_url = config["api"]["datapoints"]
+                        post_array = []
+                        for i in range(0,len(df)):
+                            if not df.loc[i,tag].isna().any():
+                                post = [int(df.loc[i,'newTime']),float(df.loc[i,tag])]
+                                post_array.append(post)
+                                
+                        post_body = [{"name":new_tag,"datapoints":post_array,"tags": {"type":"derived"}}]
+                        print(post_body)
+                        if self.unitsId:
+                            topicLine = f"u/{self.destUnitId}/{new_tag}/r"
+                            pb = {"v":post_array[0][1],"t":post_array[0][0]}
+                            self.client.publish(topicLine,json.dumps(pb))
+
+                            
+                        try:
+                            res1 = requests.post(post_url,json=post_body)
+                            print("posting on",post_url)
+                            print("`"*30,str(new_tag),"`"*30)
+                            print("`"*30,str(res1.status_code),"`"*30)
+                        except:
+                            print(traceback.format_exc())
+                        # print(post_body)
+                except:
+                    print(traceback.format_exc())                
+    
 
             
     def dataExachangePower(self,tagList,startTime,endTime,client = False,unitsId=False):
