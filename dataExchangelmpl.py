@@ -1083,12 +1083,13 @@ class dataEx:
                         post_url = config["api"]["datapoints"]
                         post_array = []
                         for i in range(0,len(df)):
-                            if not df.loc[i,tag].isna().any():
+                            if not pd.isnull(df.loc[i,tag]):
                                 post = [int(df.loc[i,'newTime']),float(df.loc[i,tag])]
                                 post_array.append(post)
                                 
                         post_body = [{"name":new_tag,"datapoints":post_array,"tags": {"type":"derived"}}]
                         print(post_body)
+                        
                         if self.unitsId:
                             topicLine = f"u/{self.destUnitId}/{new_tag}/r"
                             pb = {"v":post_array[0][1],"t":post_array[0][0]}

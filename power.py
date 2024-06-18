@@ -47,12 +47,13 @@ sourceUnitsId = "62ff525f0053c325ccf27a1d"
 destUnitId = "65cdb12fd958e80007254cf3"
 sourcePredix = "SIK"
 destPrefix = "YYM"
+
 dataEx = dataEx()
 dataEx.mainFuncPower(sourceUnitsId,destUnitId,client,sourcePredix,destPrefix)
 # dataEx.mainFuncPowerBackFIll(sourceUnitsId,client,destUnitId,sourcePredix,destPrefix)
 # exit()
 scheduler = BackgroundScheduler()
-scheduler.add_job(func=dataEx.mainFuncPower,args=[sourceUnitsId,destUnitId,client,sourcePredix,destPrefix], trigger="interval", seconds=60*5,max_instances=2)
+scheduler.add_job(func=dataEx.mainFuncPower,args=[sourceUnitsId,destUnitId,client,sourcePredix,destPrefix], trigger="interval", seconds=60*5,max_instances=3)
 scheduler.start()
 
 client.loop_forever(retry_first_connection=True)
