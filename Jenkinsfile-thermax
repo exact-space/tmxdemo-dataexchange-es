@@ -1,62 +1,387 @@
+
+def deploymentStatus = [:]
+def deploymentStatusList = []
+
 pipeline {
     agent any  
     environment {
-        VERSION = "${env.BUILD_ID}"
         registry = "tmxedgelivepprodakscontainerregistry.azurecr.io"
-        APP_NAME = "tmxdemo-dataexchange-es"
+        repo_name = "tmxdemo-dataexchange"
+        service_type = "api"
+        VERSION = "${env.BUILD_ID}"
+        APP_NAME = "${repo_name}-es"
+        BRANCH_NAME = "${scm.branches[0].name}"
     }
     stages {
-        stage("get scm") {
+        stage('Get Branch Name') {
             steps {
-                checkout([$class: 'GitSCM',
-                    branches: [[name: 'main']],
-                    userRemoteConfigs: [[url: 'git@github.com:exact-space/tmxdemo-dataexchange-es.git']]
-                ])
+                script {
+                    echo "Current Branch : ${BRANCH_NAME}"
+                }
             }
         }
-        stage("cython compilation") {
+// MAIN BRANCH
+ 
+        stage("loging in to registry to pull old r1") {    
+            when {
+                 expression { return env.BRANCH_NAME == 'main' }
+            }   
+            steps {
+                sh " az acr login --name tmxedgelivepprodakscontainerregistry"
+            }   
+        }
+       /* stage("Tag old image as r0") {
+            when {
+                 expression { return env.BRANCH_NAME == 'main' }
+            }
+            steps {
+                sh """
+                docker pull $registry/$APP_NAME:r1
+                docker tag $registry/$APP_NAME:r1 $registry/$APP_NAME:r0
+                docker push $registry/$APP_NAME:r0
+                """
+            }
+        }*/
+        stage("get scm for r1"){
+            when {
+                 expression { return env.BRANCH_NAME == 'main' }
+            }
+            steps{
+                checkout scmGit(branches: [[name: '*/main']], extensions: [[$class: 'SubmoduleOption', recursive: true]], userRemoteConfigs: [[url: "git@github.com:exact-space/${repo_name}.git"]])
+                
+            }
+        }
+        stage("cython3 compilation for r1 ") {
+            when {
+                 expression { return env.BRANCH_NAME == 'main' }
+            }
             steps {
                 sh "cython3 index.py --embed"
             }
         }
-        stage("loging in to registry for pull") {
+        stage("gcc for r1") {
+            when {
+                 expression { return env.BRANCH_NAME == 'main' }
+            }
             steps {
-                sh " az acr login --name tmxedgelivepprodakscontainerregistry"
+                sh "gcc index.c -I/usr/include/python3.10/ -Wall -Wextra -O2 -g -o index -lpython3.10"
             }
         }
-        stage("building images") {
+        stage("building r1 images") {
+            when {
+                 expression { return env.BRANCH_NAME == 'main' }
+            }
             steps {
-                sh "docker build --rm --no-cache -t $APP_NAME:r1 -f Dockerfile-thermax ."
+                sh "docker build --rm --no-cache -t $APP_NAME:r1 ."
             }
         }
         stage("tagging images-r1") {
+            when {
+                 expression { return env.BRANCH_NAME == 'main' }
+            }
             steps {
                 sh "docker tag $APP_NAME:r1 $registry/$APP_NAME:r1"
             }
         }
         stage("remove old docker image-r1") {
+            when {
+                 expression { return env.BRANCH_NAME == 'main' }
+            }
             steps {
                 sh "docker image rm $APP_NAME:r1"
             }
         }
-        stage("loging in to registry") {
+        stage("loging in to registry to push r1") {
+            when {
+                 expression { return env.BRANCH_NAME == 'main' }
+            }
             steps {
                 sh " az acr login --name tmxedgelivepprodakscontainerregistry"
             }
         }
         stage("image push-r1") {
+            when {
+                 expression { return env.BRANCH_NAME == 'main' }
+            }
             steps {
-                sh " docker push $registry/$APP_NAME:r1"
+                sh "docker push $registry/$APP_NAME:r1"
             }
         }
-        stage('deploying to thermax') {
+        stage('deploying latestimage to TMX') {
+            when {
+                 expression { return env.BRANCH_NAME == 'main' }
+            }
             steps {
-                catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
-                timeout(time: 15, unit: 'MINUTES') {
-                    httpRequest url: "http://10.212.127.196:3186/cicd/api/$APP_NAME", timeout: 900000
+                script {
+                    catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
+                        def initialStatus = deploy("http://10.212.127.196:3186/cicd/${service_type}/$APP_NAME", 'TMX_latest')
+                        initialStatus.name = 'TMX_latest'
+                        deploymentStatus['TMX_latest'] = initialStatus ?: [result: 'FAILURE', message: 'Deployment failed']
+                        deploymentStatusList << initialStatus
+                        sleep 45
+                    }
                 }
             }
         }
+        stage('check for service status on TMX') {
+            when {
+                 expression { return env.BRANCH_NAME == 'main' }
+            }
+            steps {
+                script {
+                    catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
+                        def revertStatus = deploy("http://10.212.127.196:3186/cicd/${service_type}/revert/$APP_NAME", 'TMX_revert')
+                        revertStatus.name = 'TMX_revert'
+                        deploymentStatus['TMX_revert'] = revertStatus ?: [result: 'FAILURE', message: 'Deployment failed']
+                        deploymentStatusList << revertStatus
+                    }
+                }
+            }
+        }
+// Develop Branch 
+
+        stage("loging in to registry to pull old d1") {    
+            when {
+                 expression { return env.BRANCH_NAME == 'develop' }
+            }   
+            steps {
+                sh " az acr login --name tmxedgelivepprodakscontainerregistry"
+            }   
+        }
+        stage("Tag old image as d0") {
+            when {
+                 expression { return env.BRANCH_NAME == 'develop' }
+            }
+            steps {
+                sh """
+                docker pull $registry/$APP_NAME:d1
+                docker tag $registry/$APP_NAME:d1 $registry/$APP_NAME:d0
+                docker push $registry/$APP_NAME:d0
+                docker pull $registry/uat-smoke-test-es:r1
+                """
+            }
+        }
+        stage("get scm for d1"){
+            when {
+                 expression { return env.BRANCH_NAME == 'develop' }
+            }
+            steps{
+                checkout scmGit(branches: [[name: '*/develop']], extensions: [[$class: 'SubmoduleOption', recursive: true]], userRemoteConfigs: [[url: "git@github.com:exact-space/${repo_name}.git"]])
+                
+            }
+        }
+        stage("cython3 compilation for d1 ") {
+            when {
+                 expression { return env.BRANCH_NAME == 'develop' }
+            }
+            steps {
+                sh "cython3 index.py --embed"
+            }
+        }
+        stage("gcc for d1") {
+            when {
+                 expression { return env.BRANCH_NAME == 'develop' }
+            }
+            steps {
+                sh "gcc index.c -I/usr/include/python3.10/ -Wall -Wextra -O2 -g -o index -lpython3.10"
+            }
+        }
+        /*stage('smoke test before build and deploy') {
+            when {
+                 expression { return env.BRANCH_NAME == 'develop' }
+            }
+            steps {
+                script {
+                    def smokeTestStatus = sh(script: "docker run --rm -v ${pwd}:/app $registry/uat-smoke-test-es:r1 python /app/src/smoketest.py", returnStatus: true)
+                    echo "Smoke Test Status: ${smokeTestStatus}"
+                    if (smokeTestStatus != 0) {
+                        def emailAddresses = readFile("${env.WORKSPACE}/mail.txt").trim()
+                        if (emailAddresses) {
+                            emailext body: "Smoke test before build and deploy failed for ${APP_NAME}. Please check logs.",
+                                subject: "Smoke Test for ${currentBuild.fullDisplayName}",
+                                to: emailAddresses
+                            error "Smoke test before build and deploy failed."
+                        }else {
+                            error "No email addresses found in mail.txt"
+                }
+            } else {
+                echo "Smoke Test Passed"
+            }
+        }
+        }        
+        }*/
+        stage("building d1 images") {
+            when {
+                 expression { return env.BRANCH_NAME == 'develop' }
+            }
+            steps {
+                sh "docker build --rm --no-cache -t $APP_NAME:d1 ."
+            }
+        }
+        stage("tagging images-d1") {
+            when {
+                 expression { return env.BRANCH_NAME == 'develop' }
+            }
+            steps {
+                sh "docker tag $APP_NAME:d1 $registry/$APP_NAME:d1"
+            }
+        }
+        stage("remove old docker image-d1") {
+            when {
+                 expression { return env.BRANCH_NAME == 'develop' }
+            }
+            steps {
+                sh "docker image rm $APP_NAME:d1"
+            }
+        }
+        stage("loging in to registry to push d1") {
+            when {
+                 expression { return env.BRANCH_NAME == 'develop' }
+            }
+            steps {
+                sh " az acr login --name tmxedgelivepprodakscontainerregistry"
+            }
+        }
+        stage("image push-d1") {
+            when {
+                 expression { return env.BRANCH_NAME == 'develop' }
+            }
+            steps {
+                sh "docker push $registry/$APP_NAME:d1"
+            }
+        }
+        stage('deploying latestimage to UAT') {
+            when {
+                 expression { return env.BRANCH_NAME == 'develop' }
+            }
+            steps {
+                script {
+                    catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
+                        def initialStatus = deploy("http://10.211.19.101:3190/cicd/${service_type}/$APP_NAME", 'UAT_latest')
+                        initialStatus.name = 'UAT_latest'
+                        deploymentStatus['UAT_latest'] = initialStatus ?: [result: 'FAILURE', message: 'Deployment failed']
+                        deploymentStatusList << initialStatus
+                        sleep 45
+                    }
+                }
+            }
+        }
+        /*stage('smoke test post deployment') {
+            when {
+                 expression { return env.BRANCH_NAME == 'develop' }
+            }
+            steps {
+                script {
+                    def smokeTestStatus = sh(script: "docker run --rm -v ${pwd}:/app $registry/uat-smoke-test-es:r1 python /app/src/smoketest.py", returnStatus: true)
+                    echo "Smoke Test Status: ${smokeTestStatus}"
+                    if (smokeTestStatus != 0) {
+                        def emailAddresses = readFile("${env.WORKSPACE}/mail.txt").trim()
+                        if (emailAddresses) {
+                            emailext body: "smoke test post deployment failed for ${APP_NAME}. Please check logs.",
+                                subject: "Smoke Test for ${currentBuild.fullDisplayName}",
+                                to: emailAddresses
+                            error "smoke test post deployment failed."
+                        }else {
+                            error "No email addresses found in mail.txt"
+                }
+            } else {
+                echo "Smoke Test Passed"
+            }
+        }
+        }        
+        }*/
+        stage('check for service status on UAT') {
+            when {
+                 expression { return env.BRANCH_NAME == 'develop' }
+            }
+            steps {
+                script {
+                    catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
+                        def revertStatus = deploy("http://10.211.19.101:3190/cicd/${service_type}/revert/$APP_NAME", 'UAT_revert')
+                        revertStatus.name = 'UAT_revert'
+                        deploymentStatus['UAT_revert'] = revertStatus ?: [result: 'FAILURE', message: 'Deployment failed']
+                        deploymentStatusList << revertStatus
+                    }
+                }
+            }
         }
     }
-}  
+    post {
+        always {
+            script {
+                def buildStartTime = new Date(currentBuild.rawBuild.getTimeInMillis())
+                def buildEndTime = new Date(currentBuild.rawBuild.startTimeInMillis + currentBuild.duration)
+
+                def emailAddress = readFile("${env.WORKSPACE}/mail.txt").trim().split("\\s*,\\s*").join(", ")
+                if (emailAddress){
+                    emailext body: createEmailBody(buildStartTime, buildEndTime, deploymentStatusList, deploymentStatus),
+                            subject: "Deployment Status for ${currentBuild.fullDisplayName}",
+                            to: emailAddress
+                }
+            }
+        }
+    } 
+}
+
+def deploy(deploymentUrl, dataCentre) {
+    def status = [:]
+
+    timeout(time: 15, unit: 'MINUTES') {
+        def response = httpRequest(url: deploymentUrl, timeout: 900000)
+        def statusCode = response.status
+        def responseBody = response.content
+
+        echo "Response Status Code: ${statusCode}"
+        echo "Response Body: ${responseBody}"
+        echo "Data Centre: ${dataCentre}"
+
+        // Include response body in status object
+        status.responseBody = responseBody
+
+        // Check HTTP response code to determine success or failure
+        if (statusCode == 200 ) {
+            // Deployment successful
+            status.result = 'SUCCESS'
+            status.message = "Deployment success ${statusCode} ,"
+        } else {
+            // Deployment failed
+            status.result = 'FAILURE'
+            status.message = "Deployment failed ,"
+        }
+
+        return status
+    }
+}
+
+def createEmailBody(buildStartTime, buildEndTime, deploymentStatusList, deploymentStatus) {
+    
+    def body = "Build triggered at: ${buildStartTime} . . .\n\nDeployment Status: . . .\n\n"
+    
+    def branchName = env.GIT_BRANCH.replaceAll("refs/heads/", "")
+    def dataCenters
+
+    if (branchName == 'main') {
+        dataCenters = ['TMX_latest','TMX_revert']
+    } else if (branchName == 'develop') {
+        dataCenters = ['UAT_latest', 'UAT_revert']
+    } else {
+        dataCenters = []  // Default empty list if branch is not recognized
+    }
+
+    dataCenters.each { dataCentre ->
+        def status = deploymentStatus[dataCentre]
+        if (status) {
+            body += "${dataCentre}: \n"
+            body += "${status['message']}\n"
+            body += "Response Body: ${status['responseBody']} . . .\n\n"
+        } else {
+            body += "${dataCentre}: No status available . . .\n\n"
+        }
+    }
+
+    def buildUrl = currentBuild.absoluteUrl
+    body += "\nJenkins Build Log: ${buildUrl} . . .\n\n"
+    body += "Build ended at: ${buildEndTime}\n"
+
+    return body
+}
