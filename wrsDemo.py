@@ -43,17 +43,16 @@ except:
 
 client.connect(config["BROKER_ADDRESS"], 1883, 2800)
 
-sourceUnitsId = "62ff525f0053c325ccf27a1d"
-destUnitId = "65cdb12fd958e80007254cf3"
-sourcePredix = "SIK"
-destPrefix = "YYM"
+sourceUnitsId = "61dd822329c9e07656414708"
+destUnitId = "666bee76b145eb000775033f"
+sourcePredix = "HRD"
+destPrefix = "VRP"
 
 dataEx = dataEx()
-dataEx.mainFuncPower(sourceUnitsId,destUnitId,client,sourcePredix,destPrefix)
-# dataEx.mainFuncPowerBackFIll(sourceUnitsId,client,destUnitId,sourcePredix,destPrefix)
-# exit()
+dataEx.mainFuncWRS(sourceUnitsId,destUnitId,client,sourcePredix,destPrefix)
+
 scheduler = BackgroundScheduler()
-scheduler.add_job(func=dataEx.mainFuncPower,args=[sourceUnitsId,destUnitId,client,sourcePredix,destPrefix], trigger="interval", seconds=60*5,max_instances=3)
+scheduler.add_job(func=dataEx.mainFuncWRS,args=[sourceUnitsId,destUnitId,client,sourcePredix,destPrefix], trigger="interval", seconds=60*5,max_instances=3)
 scheduler.start()
 
 client.loop_forever(retry_first_connection=True)
