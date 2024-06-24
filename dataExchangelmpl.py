@@ -222,69 +222,75 @@ class dataEx:
         return df
         
         
-    def getValuesV2(self,tagList,startTime, endTime):
-        url = config["api"]["query"]
-        metrics = []
-        for tag in tagList:
-            tagDict = {
-                  "tags": {},
-                  "name": tag,
-                  "aggregators": [
-                    {
-                      "name": "avg",
-                      "sampling": {
-                        "value": "1",
-                        "unit": "minutes"
-                      },
-                      "align_end_time": True
-                    }
-                  ]
-                }
-            metrics.append(tagDict)
-            
-        query ={
-            "metrics":metrics,
-            "plugins": [],
-            "cache_time": 0,
-            "start_absolute": int(startTime),
-            "end_absolute": int(endTime)
-            
-        }
-    #     print(json.dumps(query,indent=4))
+    
+    def getValuesV2(self,tagList,startTime, endTime,agg = [{"name": "avg","sampling": {"value": "1","unit": "minutes"},"align_end_time": True}]
+                        ,manualTags =[],profiling=False):
         try:
-            res=requests.post(url=self.url_kairos, json=query)
-        except:
-            time.sleep(5)
-            res=requests.post(url=self.url_kairos, json=query)
 
-        if res.status_code != 200:
+            url = config["api"]["query"]
+            print(url)
+
+            metrics = []
+            if agg:
+                for tag in set(tagList):
+                    tagDict = {
+                        "tags":{},
+                        "name":tag,
+                        "aggregators": agg
+                    }
+                    metrics.append(tagDict)
+            else:
+                for tag in tagList:
+                    tagDict = {
+                        "tags":{},
+                        "name":tag
+                        }
+                    metrics.append(tagDict)
+                
+            query ={
+                "metrics":metrics,
+                "plugins": [],
+                "cache_time": 0,
+                "start_absolute": startTime,
+                "end_absolute": endTime
+                
+            }
+            print(startTime,endTime)
+            # print(url)
+            # print(json.dumps(query,indent=4))
+            res=requests.post(url=url, json=query)
             print(res.status_code)
-            time.sleep(5)
-            try:
-                res=requests.post(url=self.url_kairos, json=query)
-            except:
-                time.sleep(5)
-                res=requests.post(url=self.url_kairos, json=query)
+            values=json.loads(res.content)
+            finalDF = pd.DataFrame()
+            for i in values["queries"]:
+                df = pd.DataFrame(i["results"][0]["values"],columns=["time",i["results"][0]["name"]])
+                try:
+                    # finalDF = pd.concat([finalDF,df.set_index("time")],axis=1)
+                    finalDF = finalDF.join(df.set_index("time"),how="outer")
 
-            print(res.status_code)
+                except Exception as e:
+                    print(e)
+                    finalDF = pd.concat([finalDF,df],axis=1)
+                
+            # try:
+            #     if profiling:
+            #         profile = pro.ProfileReport(finalDF)
+            #         profile.to_file(self.htmlFileName)
+            #         self.uploadTrainingResults(self.htmlFileName)
+            # except:
+            #     pass
 
+            finalDF.reset_index(inplace=True)
+            # finalDF = self.fillnaV2(finalDF)
+            # print(finalDF)
+            # dates = pd.to_datetime(finalDF['time'],unit='ms').astype(str).tolist()
 
-        values=json.loads(res.content)
-        finalDF = pd.DataFrame()
-        for i in values["queries"]:
-    #         print(json.dumps(i["results"][0]["name"],indent=4))
-            df = pd.DataFrame(i["results"][0]["values"],columns=["time",i["results"][0]["name"]])
-    #         display(df)
-    #         print("-"*100)
-            try:
-                finalDF = pd.concat([finalDF,df.set_index("time")],axis=1)
-            except Exception as e:
-                print(e)
-                finalDF = pd.concat([finalDF,df],axis=1)
-            
-        finalDF.reset_index(inplace=True)
-        return finalDF
-
+            finalDF = finalDF.loc[:,~finalDF.columns.duplicated()].reset_index(drop=True)
+            return finalDF
+        except Exception as e:
+            print(traceback.format_exc())
+            return pd.DataFrame(),0
+        
 
     def dataExachangeCooling(self,taglist):
         try:
@@ -640,7 +646,7 @@ class dataEx:
                 
                 # df['Date']=pd.to_datetime(df['time'],unit='ms',errors='coerce')
                 if len(df) == 0 and not noTag :
-                    print("No data for ", tag)
+                    # print("No data for ", tag,end)
                     self.noDataTags.append(tag)
                 if len(df)!= 0:
                     # if (not df[tag].iloc[-1]) and (tag not in self.noDataTags):
@@ -755,7 +761,7 @@ class dataEx:
                 
                 # df['Date']=pd.to_datetime(df['time'],unit='ms',errors='coerce')
                 if len(df) == 0 and not noTag :
-                    print("No data for ", tag)
+                    # print("No data for ", tag)
                     self.noDataTags.append(tag)
                 if len(df)!= 0:
                     # if (not df[tag].iloc[-1]) and (tag not in self.noDataTags):
@@ -971,7 +977,7 @@ class dataEx:
 
         for i in range(10):
             print("Back filling")
-            tagList = list(tag_df["dataTagId"])
+            tagList = list(set(list(tag_df["dataTagId"])))
             # newList = [ x.replace(sourcePredix,destPrefix)  for x in tagList if sourcePredix in x]
             # for i in range(0,len(newList),10):
             #     et = int(time.time()*1000)
@@ -1018,9 +1024,11 @@ class dataEx:
              
     def dataexPower(self,miniList,startTime,endTime,noTag=False):
         exceptionsList = []
+        # print(miniList)
         if not noTag:
             maindf = self.getValuesV2(miniList,startTime,endTime)
             print(maindf)
+
         if noTag:
             
             lower_bound = 1710095400000
@@ -1029,22 +1037,24 @@ class dataEx:
             et = random.randint(lower_bound, upper_bound)
             st = et - 1*1000*60*10
             maindf = self.getValuesV2(miniList,st,et)
-            if len(maindf) == 0:
-                df_LV = self.getLastValues(miniList)
+            # if len(maindf) == 0:
+                # df_LV = self.getLastValues(miniList)
                 # print(df_LV)
-                if len(df_LV) > 0:
-                    # print(self.now)
-                    endTime = df_LV.loc[0,'time'] + 1*1000*60*5
-                    startTime = endTime - 1*1000*60*20
-                    maindf = self.getValuesV2(miniList,startTime,endTime)
-                    maindf.dropna(inplace=True)
-                    maindf.reset_index(drop=True,inplace=True)
+                # if len(df_LV) > 0:
+                #     # print(self.now)
+                #     endTime = df_LV.loc[0,'time'] + 1*1000*60*5
+                #     startTime = endTime - 1*1000*60*20
+                #     maindf = self.getValuesV2(miniList,startTime,endTime)
+                #     maindf.dropna(inplace=True)
+                #     maindf.reset_index(drop=True,inplace=True)
                     # maindf = maindf[maindf[miniList[0]]!='NaN']
-                maindf.reset_index(drop=True,inplace=True)
+            maindf.reset_index(drop=True,inplace=True)
         maindf.rename(columns={"index":"time"},inplace=True)
-        print(maindf)
+        print("noTag:",noTag)
+        print("maindf \n",maindf)
         for tag in miniList:
             if self.sourcePrefix not in tag:
+                # print("sourceprefix not in tag")
                 pass
             else:
                 try:
@@ -1066,7 +1076,7 @@ class dataEx:
                     
                     # df['Date']=pd.to_datetime(df['time'],unit='ms',errors='coerce')
                     if len(df) == 0 and not noTag :
-                        print("No data for ", tag)
+                        # print("No data for ", tag)
                         self.noDataTags.append(tag)
                     if len(df)!= 0:
                         # if (not df[tag].iloc[-1]) and (tag not in self.noDataTags):
@@ -1125,10 +1135,12 @@ class dataEx:
             miniList = tagList[ss:ss+stepSize]
             print(startTime,endTime)
             self.dataexPower(miniList,startTime,endTime)
-            
+        
+        # count = 
         for ss in range(0,len(self.noDataTags),stepSize):
-            print(miniList)
             miniList = self.noDataTags[ss:ss+stepSize]
+            print("miniList",miniList)
+
             self.dataexPower(miniList,startTime,endTime,True)
 
     
@@ -1182,8 +1194,7 @@ class dataEx:
 
             tag_df = self.getTagmeta(sourceUnitId)
 
-            tagList = list(tag_df["dataTagId"])
-
+            tagList = list(set(list(tag_df["dataTagId"])))
             print("time frame",startDate,endDate)
             print("time frame",startTimestamp,endTimestamp)
 
@@ -1244,7 +1255,7 @@ class dataEx:
 
             tag_df = self.getTagmeta(sourceUnitId)
 
-            tagList = list(tag_df["dataTagId"])
+            tagList = list(set(list(tag_df["dataTagId"])))
 
             print("time frame",startDate,endDate)
             print("time frame",startTimestamp,endTimestamp)
@@ -1307,8 +1318,7 @@ class dataEx:
 
             tag_df = self.getTagmeta(sourceUnitId)
 
-            tagList = list(tag_df["dataTagId"])
-
+            tagList = list(set(list(tag_df["dataTagId"])))
             print("time frame",startDate,endDate)
             print("time frame",startTimestamp,endTimestamp)
 
