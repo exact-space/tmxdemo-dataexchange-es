@@ -934,11 +934,13 @@ class dataEx:
 
         
         currentTime = datetime.datetime(2024, 5, 7,11,28,00)  - datetime.timedelta(hours = 5,minutes=30)
-        currentTime = datetime.datetime(2024, 5, 30,10,00,00)  - datetime.timedelta(hours = 5,minutes=30)
+        currentTime = datetime.datetime(2024, 6, 24,15,40,00)  - datetime.timedelta(hours = 5,minutes=30)
 
         currentMonth = currentTime.month 
         currentQuarter = (currentMonth-1)//3 + 1
         currentDay = currentTime.day 
+        if currentDay > 28:
+                currentDay = int(random.randint(12, 25))
         # currentDay = 25
         currentHour = currentTime.hour
         currentMinute =  currentTime.minute
@@ -1145,6 +1147,8 @@ class dataEx:
             # currentMonth = currentTime.month 
             # currentQuarter = (currentMonth-1)//3 + 1
             currentDay = currentTime.day 
+            if currentDay > 28:
+                currentDay = int(random.randint(12, 25))
             currentHour = currentTime.hour
             currentMinute =  currentTime.minute
             currentSecond = currentTime.second
