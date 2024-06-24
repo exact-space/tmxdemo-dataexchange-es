@@ -6,7 +6,7 @@ pipeline {
     agent any  
     environment {
         registry = "tmxedgelivepprodakscontainerregistry.azurecr.io"
-        repo_name = "tmxdemo-dataexchange-es"
+        repo_name = "tmxdemo-dataexchange"
         service_type = "api"
         VERSION = "${env.BUILD_ID}"
         APP_NAME = "${repo_name}-es"
