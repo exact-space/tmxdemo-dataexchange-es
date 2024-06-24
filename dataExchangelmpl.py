@@ -781,6 +781,7 @@ class dataEx:
                             
                     post_body = [{"name":new_tag,"datapoints":post_array,"tags": {"type":"derived"}}]
                     print(json.dumps(post_body))
+                    
                     if self.unitsId:
                         print("publishing on mqtt")
                         topicLine = f"u/{self.destUnitId}/{new_tag}/r"
