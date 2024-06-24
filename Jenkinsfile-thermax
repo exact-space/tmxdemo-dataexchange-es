@@ -22,15 +22,15 @@ pipeline {
         }
 // MAIN BRANCH
  
-        /*stage("loging in to registry to pull old r1") {    
+        stage("loging in to registry to pull old r1") {    
             when {
                  expression { return env.BRANCH_NAME == 'main' }
             }   
             steps {
                 sh " az acr login --name tmxedgelivepprodakscontainerregistry"
             }   
-        }*/
-        stage("Tag old image as r0") {
+        }
+       /* stage("Tag old image as r0") {
             when {
                  expression { return env.BRANCH_NAME == 'main' }
             }
@@ -41,7 +41,7 @@ pipeline {
                 docker push $registry/$APP_NAME:r0
                 """
             }
-        }
+        }*/
         stage("get scm for r1"){
             when {
                  expression { return env.BRANCH_NAME == 'main' }
