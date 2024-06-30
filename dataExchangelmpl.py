@@ -875,7 +875,7 @@ class dataEx:
         self.now = time.time() * 1000
 
         tag_df = self.getTagmeta(unitsId)
-        tagList = list(tag_df["dataTagId"])
+        tagList = list(set(list(tag_df["dataTagId"])))
         self.dataExachangeTbwes(unitsId,tagList,startTimestamp,endTimestamp,client)
 
         self.lastUpdateValueRedis(self.destUnitId,tagList[0])
@@ -914,7 +914,7 @@ class dataEx:
         tag_df = self.getTagmeta(unitsId)
         for i in range(10):
             print("Back filling")
-            tagList = list(tag_df["dataTagId"])
+            tagList = list(set(list(tag_df["dataTagId"])))
             newList = ["VGA_" + x  for x in tagList]
             for i in range(0,len(newList),10):
                 self.deleteKairos(newList[i:i+10],startTimestamp,endTimestamp)
@@ -1161,7 +1161,7 @@ class dataEx:
             # currentQuarter = (currentMonth-1)//3 + 1
             currentDay = currentTime.day 
             if currentDay > 28:
-                currentDay = int(random.randint(12, 25))
+                currentDay = 20
             currentHour = currentTime.hour
             currentMinute =  currentTime.minute
             currentSecond = currentTime.second
