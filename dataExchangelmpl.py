@@ -251,8 +251,8 @@ class dataEx:
                 "metrics":metrics,
                 "plugins": [],
                 "cache_time": 0,
-                "start_absolute": startTime,
-                "end_absolute": endTime
+                "start_absolute": int(startTime),
+                "end_absolute": int(endTime)
                 
             }
             print(startTime,endTime)
@@ -289,7 +289,7 @@ class dataEx:
             return finalDF
         except Exception as e:
             print(traceback.format_exc())
-            return pd.DataFrame(),0
+            return pd.DataFrame()
         
 
     def dataExachangeCooling(self,taglist):
@@ -486,7 +486,7 @@ class dataEx:
             
             query["start_absolute"] = startTime
             query["end_absolute"] = endTime
-            
+            print(startTime,endTime)
             # print(json.dumps(query,indent=4))
             
             url = config["api"]["datapoints"] + "/delete"
@@ -620,8 +620,12 @@ class dataEx:
                     endTime = df_LV.loc[0,'time'] + 1*1000*60*5
                     startTime = endTime - 1*1000*60*20
                     maindf = self.getValuesV2(miniList,startTime,endTime)
-                    maindf.dropna(inplace=True)
-                    maindf = maindf[maindf[miniList[0]]!='NaN']
+                    if len(maindf):
+                        maindf.dropna(inplace=True)
+                        try:
+                            maindf = maindf[maindf[miniList[0]]!='NaN']
+                        except:
+                            pass
                 maindf.reset_index(drop=True,inplace=True)
         maindf.rename(columns={"index":"time"},inplace=True)
         print(maindf)
@@ -941,7 +945,7 @@ class dataEx:
 
         
         currentTime = datetime.datetime(2024, 5, 7,11,28,00)  - datetime.timedelta(hours = 5,minutes=30)
-        currentTime = datetime.datetime(2024, 6, 24,15,40,00)  - datetime.timedelta(hours = 5,minutes=30)
+        currentTime = datetime.datetime(2024, 6, 28,1,00,00)  - datetime.timedelta(hours = 5,minutes=30)
 
         currentMonth = currentTime.month 
         currentQuarter = (currentMonth-1)//3 + 1
@@ -974,14 +978,81 @@ class dataEx:
         self.now = time.mktime(currentTime.timetuple())*1000
         tag_df = self.getTagmeta(unitsId)
         print(startTimestamp,endTimestamp)
+        et = int(time.time()*1000) -  1*1000*60*60*24*2
 
-        for i in range(10):
+        for i in range(1):
             print("Back filling")
-            tagList = list(set(list(tag_df["dataTagId"])))
+            tagList = list(set(list(tag_df["dataTagId"]))) 
+            tagList2 =  [
+  "SIK_Bataan_BLR_1_FUEL_1_COAL_FLOW",
+  "SIK_Bataan_BLR_1_FUEL_1_FC",
+  "SIK_Bataan_BLR_1_FUEL_1_VM",
+  "SIK_Bataan_BLR_1_FUEL_1_TM",
+  "SIK_Bataan_BLR_1_FUEL_1_SM",
+  "SIK_Bataan_BLR_1_FUEL_1_IM",
+  "SIK_Bataan_BLR_1_FUEL_1_ASH",
+  "SIK_Bataan_BLR_1_FUEL_1_GCV",
+  "SIK_Bataan_BLR_1_FUEL_1_SULPHUR",
+  "SIK_Bataan_BLR_1_FUEL_1_COST",
+  "SIK_Bataan_BLR_1_FUEL_2_COAL_FLOW",
+  "SIK_Bataan_BLR_1_FUEL_2_FC",
+  "SIK_Bataan_BLR_1_FUEL_2_VM",
+  "SIK_Bataan_BLR_1_FUEL_2_TM",
+  "SIK_Bataan_BLR_1_FUEL_2_SM",
+  "SIK_Bataan_BLR_1_FUEL_2_IM",
+  "SIK_Bataan_BLR_1_FUEL_2_ASH",
+  "SIK_Bataan_BLR_1_FUEL_2_GCV",
+  "SIK_Bataan_BLR_1_FUEL_2_SULPHUR",
+  "SIK_Bataan_BLR_1_FUEL_2_COST",
+  "SIK_Bataan_BLR_1_FUEL_3_COAL_FLOW",
+  "SIK_Bataan_BLR_1_FUEL_3_FC",
+  "SIK_Bataan_BLR_1_FUEL_3_VM",
+  "SIK_Bataan_BLR_1_FUEL_3_TM",
+  "SIK_Bataan_BLR_1_FUEL_3_SM",
+  "SIK_Bataan_BLR_1_FUEL_3_IM",
+  "SIK_Bataan_BLR_1_FUEL_3_ASH",
+  "SIK_Bataan_BLR_1_FUEL_3_GCV",
+  "SIK_Bataan_BLR_1_FUEL_3_SULPHUR",
+  "SIK_Bataan_BLR_1_FUEL_3_COST",
+  "SIK_Bataan_BLR_1_COInFlueGasPPM",
+  "SIK_Bataan_BLR_1_CO2",
+  "SIK_Bataan_BLR_1_COAL_FLOW",
+  "SIK_Bataan_BLR_1_FUEL_WGT_AVG_FC",
+  "SIK_Bataan_BLR_1_FUEL_WGT_AVG_VM",
+  "SIK_Bataan_BLR_1_FUEL_WGT_AVG_TM",
+  "SIK_Bataan_BLR_1_FUEL_WGT_AVG_SM",
+  "SIK_Bataan_BLR_1_FUEL_WGT_AVG_IM",
+  "SIK_Bataan_BLR_1_FUEL_WGT_AVG_ASH",
+  "SIK_Bataan_BLR_1_FUEL_WGT_AVG_GCV",
+  "SIK_Bataan_BLR_1_FUEL_WGT_AVG_SULPHUR",
+  "SIK_Bataan_BLR_1_FUEL_WGT_AVG_COST",
+  "SIK_Bataan_BLR_1_FLY_ASH",
+  "SIK_Bataan_BLR_1_BED_ASH",
+  "SIK_Bataan_BLR_1_FLY_ASH_QUANT",
+  "SIK_Bataan_BLR_1_BED_ASH_QUANT",
+  "SIK_Bataan_BLR_1_AIR_HUMIDITY_FACTOR",
+  "SIK_Bataan_BLR_1_RADIATION",
+  "SIK_Bataan_BLR_1_LOSS_UNACCOUNTED",
+  "SIK_Bataan_CHIMNEY_CO",
+    "SIK_RAW_WATER_TOTALIZER",
+    "SIK_Bataan_DM_WATER",
+    "SIK_Bataan_AUC_POW_CONS_PRCNT",
+    "SIK_Bataan_AUX_POW_CONS_KW",
+    "SIK_Bataan_1_FORCED_OUTAGE",
+    "SIK_Bataan_1_TG_STARTUP",
+    "SIK_Generator System_1_Bataan_1_BLR_STARTUP",
+    "SIK_Generator System_1_Bataan_1_COAL_CONSUMPTION_STARTUP",
+    "SIK_Generator System_1_Bataan_1_TOT_BLOW_DOWN",
+    "SIK_Generator System_1_Bataan_1_FEED_WATER_TDS",
+    "SIK_Generator System_1_Bataan_1_MAX_WATER_TDS",
+    "SIK_Generator System_1_Bataan_1_LIFT_PRESSURE_SAFETY_VALVE",
+    "SIK_Generator System_1_Bataan_1_RESET_PRESSURE_SAFETY_VALVE",
+    "SIK_Generator System_1_Bataan_1_OPENING_SAFETY_VALVE"
+
+]
             # newList = [ x.replace(sourcePredix,destPrefix)  for x in tagList if sourcePredix in x]
             # for i in range(0,len(newList),10):
-            #     et = int(time.time()*1000)
-            #     st = et - 1*1000*60*60*3
+            #     st = et - 1*1000*60*60*24
             #     self.deleteKairos(newList[i:i+10],st,et)
             
             # self.dataExachangePower(tagList,startTimestamp,endTimestamp,client)
@@ -989,6 +1060,11 @@ class dataEx:
                 self.dataExachangePower(tagList,endTimestamp,startTimestamp,client)
             else:
                 self.dataExachangePower(tagList,startTimestamp,endTimestamp,client)
+
+            if startTimestamp > endTimestamp:
+                self.dataExachangePower(tagList2,endTimestamp,startTimestamp,client)
+            else:
+                self.dataExachangePower(tagList2,startTimestamp,endTimestamp,client)
             endTimestamp = startTimestamp
             startTimestamp = endTimestamp - 1*1000*60*60*24
             self.now = self.now -  1*1000*60*60*24
@@ -1024,7 +1100,7 @@ class dataEx:
              
     def dataexPower(self,miniList,startTime,endTime,noTag=False):
         exceptionsList = []
-        # print(miniList)
+        print(miniList)
         if not noTag:
             maindf = self.getValuesV2(miniList,startTime,endTime)
             print(maindf)
@@ -1037,17 +1113,20 @@ class dataEx:
             et = random.randint(lower_bound, upper_bound)
             st = et - 1*1000*60*10
             maindf = self.getValuesV2(miniList,st,et)
-            # if len(maindf) == 0:
-                # df_LV = self.getLastValues(miniList)
+            if len(maindf) == 0:
+                maindf = self.getLastValues(miniList)
                 # print(df_LV)
                 # if len(df_LV) > 0:
                 #     # print(self.now)
                 #     endTime = df_LV.loc[0,'time'] + 1*1000*60*5
                 #     startTime = endTime - 1*1000*60*20
                 #     maindf = self.getValuesV2(miniList,startTime,endTime)
-                #     maindf.dropna(inplace=True)
-                #     maindf.reset_index(drop=True,inplace=True)
-                    # maindf = maindf[maindf[miniList[0]]!='NaN']
+                #     if len(maindf):
+                #         maindf.dropna(inplace=True)
+                #         try:
+                #             maindf = maindf[maindf[miniList[0]]!='NaN']
+                #         except:
+                #             pass
             maindf.reset_index(drop=True,inplace=True)
         maindf.rename(columns={"index":"time"},inplace=True)
         print("noTag:",noTag)
@@ -1069,7 +1148,7 @@ class dataEx:
                     # print(df)
         
                         
-                    new_tag = tag.replace(self.sourcePrefix,self.destPrefix)
+                    new_tag = tag.replace(self.sourcePrefix,self.destPrefix).replace(self.destUnitId[-4:] + "_","")
                     # df.sort_values(by="time",inplace=True,ascending=False)
                     # df = df.sort_values(by=var, ascending=False, ignore_index=True)
                     # df.reset_index(inplace=True,drop=True)
@@ -1195,13 +1274,87 @@ class dataEx:
             tag_df = self.getTagmeta(sourceUnitId)
 
             tagList = list(set(list(tag_df["dataTagId"])))
+            tagList2 =  [
+  "SIK_Bataan_BLR_1_FUEL_1_COAL_FLOW",
+  "SIK_Bataan_BLR_1_FUEL_1_FC",
+  "SIK_Bataan_BLR_1_FUEL_1_VM",
+  "SIK_Bataan_BLR_1_FUEL_1_TM",
+  "SIK_Bataan_BLR_1_FUEL_1_SM",
+  "SIK_Bataan_BLR_1_FUEL_1_IM",
+  "SIK_Bataan_BLR_1_FUEL_1_ASH",
+  "SIK_Bataan_BLR_1_FUEL_1_GCV",
+  "SIK_Bataan_BLR_1_FUEL_1_SULPHUR",
+  "SIK_Bataan_BLR_1_FUEL_1_COST",
+  "SIK_Bataan_BLR_1_FUEL_2_COAL_FLOW",
+  "SIK_Bataan_BLR_1_FUEL_2_FC",
+  "SIK_Bataan_BLR_1_FUEL_2_VM",
+  "SIK_Bataan_BLR_1_FUEL_2_TM",
+  "SIK_Bataan_BLR_1_FUEL_2_SM",
+  "SIK_Bataan_BLR_1_FUEL_2_IM",
+  "SIK_Bataan_BLR_1_FUEL_2_ASH",
+  "SIK_Bataan_BLR_1_FUEL_2_GCV",
+  "SIK_Bataan_BLR_1_FUEL_2_SULPHUR",
+  "SIK_Bataan_BLR_1_FUEL_2_COST",
+  "SIK_Bataan_BLR_1_FUEL_3_COAL_FLOW",
+  "SIK_Bataan_BLR_1_FUEL_3_FC",
+  "SIK_Bataan_BLR_1_FUEL_3_VM",
+  "SIK_Bataan_BLR_1_FUEL_3_TM",
+  "SIK_Bataan_BLR_1_FUEL_3_SM",
+  "SIK_Bataan_BLR_1_FUEL_3_IM",
+  "SIK_Bataan_BLR_1_FUEL_3_ASH",
+  "SIK_Bataan_BLR_1_FUEL_3_GCV",
+  "SIK_Bataan_BLR_1_FUEL_3_SULPHUR",
+  "SIK_Bataan_BLR_1_FUEL_3_COST",
+  "SIK_Bataan_BLR_1_COInFlueGasPPM",
+  "SIK_Bataan_BLR_1_CO2",
+  "SIK_Bataan_BLR_1_COAL_FLOW",
+  "SIK_Bataan_BLR_1_FUEL_WGT_AVG_FC",
+  "SIK_Bataan_BLR_1_FUEL_WGT_AVG_VM",
+  "SIK_Bataan_BLR_1_FUEL_WGT_AVG_TM",
+  "SIK_Bataan_BLR_1_FUEL_WGT_AVG_SM",
+  "SIK_Bataan_BLR_1_FUEL_WGT_AVG_IM",
+  "SIK_Bataan_BLR_1_FUEL_WGT_AVG_ASH",
+  "SIK_Bataan_BLR_1_FUEL_WGT_AVG_GCV",
+  "SIK_Bataan_BLR_1_FUEL_WGT_AVG_SULPHUR",
+  "SIK_Bataan_BLR_1_FUEL_WGT_AVG_COST",
+  "SIK_Bataan_BLR_1_FLY_ASH",
+  "SIK_Bataan_BLR_1_BED_ASH",
+  "SIK_Bataan_BLR_1_FLY_ASH_QUANT",
+  "SIK_Bataan_BLR_1_BED_ASH_QUANT",
+  "SIK_Bataan_BLR_1_AIR_HUMIDITY_FACTOR",
+  "SIK_Bataan_BLR_1_RADIATION",
+  "SIK_Bataan_BLR_1_LOSS_UNACCOUNTED",
+  "SIK_Bataan_CHIMNEY_CO",
+    "SIK_RAW_WATER_TOTALIZER",
+    "SIK_Bataan_DM_WATER",
+    "SIK_Bataan_AUC_POW_CONS_PRCNT",
+    "SIK_Bataan_AUX_POW_CONS_KW",
+    "SIK_Bataan_1_FORCED_OUTAGE",
+    "SIK_Bataan_1_TG_STARTUP",
+    "SIK_Generator System_1_Bataan_1_BLR_STARTUP",
+    "SIK_Generator System_1_Bataan_1_COAL_CONSUMPTION_STARTUP",
+    "SIK_Generator System_1_Bataan_1_TOT_BLOW_DOWN",
+    "SIK_Generator System_1_Bataan_1_FEED_WATER_TDS",
+    "SIK_Generator System_1_Bataan_1_MAX_WATER_TDS",
+    "SIK_Generator System_1_Bataan_1_LIFT_PRESSURE_SAFETY_VALVE",
+    "SIK_Generator System_1_Bataan_1_RESET_PRESSURE_SAFETY_VALVE",
+    "SIK_Generator System_1_Bataan_1_OPENING_SAFETY_VALVE"
+
+]
             print("time frame",startDate,endDate)
             print("time frame",startTimestamp,endTimestamp)
+
+
 
             if startTimestamp > endTimestamp:
                 self.dataExachangePower(tagList,endTimestamp,startTimestamp,client,sourceUnitId)
             else:
                 self.dataExachangePower(tagList,startTimestamp,endTimestamp,client,sourceUnitId)
+
+            if startTimestamp > endTimestamp:
+                self.dataExachangePower(tagList2,endTimestamp,startTimestamp,client,sourceUnitId)
+            else:
+                self.dataExachangePower(tagList2,startTimestamp,endTimestamp,client,sourceUnitId)
             self.lastUpdateValueRedis(self.destUnitId,"YYM_21_MW_001")
 
         except:

@@ -102,11 +102,78 @@ tagmeta = getTagmeta(unitsId)
 lst = []
 et = time.time() * 1000
 st = et - 1*1000*60*60*24*365*10
-for tag in tagmeta:
-    df = getValuesV2([tag["dataTagId"]],st,et)
+tagList =  [
+  "SIK_Bataan_BLR_1_FUEL_1_COAL_FLOW",
+  "SIK_Bataan_BLR_1_FUEL_1_FC",
+  "SIK_Bataan_BLR_1_FUEL_1_VM",
+  "SIK_Bataan_BLR_1_FUEL_1_TM",
+  "SIK_Bataan_BLR_1_FUEL_1_SM",
+  "SIK_Bataan_BLR_1_FUEL_1_IM",
+  "SIK_Bataan_BLR_1_FUEL_1_ASH",
+  "SIK_Bataan_BLR_1_FUEL_1_GCV",
+  "SIK_Bataan_BLR_1_FUEL_1_SULPHUR",
+  "SIK_Bataan_BLR_1_FUEL_1_COST",
+  "SIK_Bataan_BLR_1_FUEL_2_COAL_FLOW",
+  "SIK_Bataan_BLR_1_FUEL_2_FC",
+  "SIK_Bataan_BLR_1_FUEL_2_VM",
+  "SIK_Bataan_BLR_1_FUEL_2_TM",
+  "SIK_Bataan_BLR_1_FUEL_2_SM",
+  "SIK_Bataan_BLR_1_FUEL_2_IM",
+  "SIK_Bataan_BLR_1_FUEL_2_ASH",
+  "SIK_Bataan_BLR_1_FUEL_2_GCV",
+  "SIK_Bataan_BLR_1_FUEL_2_SULPHUR",
+  "SIK_Bataan_BLR_1_FUEL_2_COST",
+  "SIK_Bataan_BLR_1_FUEL_3_COAL_FLOW",
+  "SIK_Bataan_BLR_1_FUEL_3_FC",
+  "SIK_Bataan_BLR_1_FUEL_3_VM",
+  "SIK_Bataan_BLR_1_FUEL_3_TM",
+  "SIK_Bataan_BLR_1_FUEL_3_SM",
+  "SIK_Bataan_BLR_1_FUEL_3_IM",
+  "SIK_Bataan_BLR_1_FUEL_3_ASH",
+  "SIK_Bataan_BLR_1_FUEL_3_GCV",
+  "SIK_Bataan_BLR_1_FUEL_3_SULPHUR",
+  "SIK_Bataan_BLR_1_FUEL_3_COST",
+  "SIK_Bataan_BLR_1_COInFlueGasPPM",
+  "SIK_Bataan_BLR_1_CO2",
+  "SIK_Bataan_BLR_1_COAL_FLOW",
+  "SIK_Bataan_BLR_1_FUEL_WGT_AVG_FC",
+  "SIK_Bataan_BLR_1_FUEL_WGT_AVG_VM",
+  "SIK_Bataan_BLR_1_FUEL_WGT_AVG_TM",
+  "SIK_Bataan_BLR_1_FUEL_WGT_AVG_SM",
+  "SIK_Bataan_BLR_1_FUEL_WGT_AVG_IM",
+  "SIK_Bataan_BLR_1_FUEL_WGT_AVG_ASH",
+  "SIK_Bataan_BLR_1_FUEL_WGT_AVG_GCV",
+  "SIK_Bataan_BLR_1_FUEL_WGT_AVG_SULPHUR",
+  "SIK_Bataan_BLR_1_FUEL_WGT_AVG_COST",
+  "SIK_Bataan_BLR_1_FLY_ASH",
+  "SIK_Bataan_BLR_1_BED_ASH",
+  "SIK_Bataan_BLR_1_FLY_ASH_QUANT",
+  "SIK_Bataan_BLR_1_BED_ASH_QUANT",
+  "SIK_Bataan_BLR_1_AIR_HUMIDITY_FACTOR",
+  "SIK_Bataan_BLR_1_RADIATION",
+  "SIK_Bataan_BLR_1_LOSS_UNACCOUNTED",
+  "SIK_Bataan_CHIMNEY_CO",
+    "SIK_RAW_WATER_TOTALIZER",
+    "SIK_Bataan_DM_WATER",
+    "SIK_Bataan_AUC_POW_CONS_PRCNT",
+    "SIK_Bataan_AUX_POW_CONS_KW",
+    "SIK_Bataan_1_FORCED_OUTAGE",
+    "SIK_Bataan_1_TG_STARTUP",
+    "SIK_Generator System_1_Bataan_1_BLR_STARTUP",
+    "SIK_Generator System_1_Bataan_1_COAL_CONSUMPTION_STARTUP",
+    "SIK_Generator System_1_Bataan_1_TOT_BLOW_DOWN",
+    "SIK_Generator System_1_Bataan_1_FEED_WATER_TDS",
+    "SIK_Generator System_1_Bataan_1_MAX_WATER_TDS",
+    "SIK_Generator System_1_Bataan_1_LIFT_PRESSURE_SAFETY_VALVE",
+    "SIK_Generator System_1_Bataan_1_RESET_PRESSURE_SAFETY_VALVE",
+    "SIK_Generator System_1_Bataan_1_OPENING_SAFETY_VALVE"
+
+]
+for tag in tagList:
+    df = getValuesV2([tag],st,et)
     if len(df):
-        print(len(df),tag["dataTagId"])
-        lst.append(tag["dataTagId"])
+        print(len(df),tag)
+        lst.append(tag)
 print(len(lst))
 # for tag in tagmeta:
 #     if "HRD_" in tag["dataTagId"]:
