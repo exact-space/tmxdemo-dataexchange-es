@@ -476,13 +476,14 @@ class dataEx:
                 # print(df)
     
       
-    def deleteKairos(self,taglist,startTime,endTime):
+    def deleteKairos(self,taglist,startTime,endTime,keywords):
         try:
             query = {}
             query["metrics"] = []
             for metric in taglist:
-                print(metric)
-                query["metrics"].append({"name":metric})
+                if keywords in metric:
+                    print(metric)
+                    query["metrics"].append({"name":metric})
             
             query["start_absolute"] = startTime
             query["end_absolute"] = endTime
@@ -495,7 +496,7 @@ class dataEx:
             if res.status_code == 200 or res.status_code == 204:
                 print("deleting successful...")
             else:
-                print("deleting unsuccessful",res.status_code)
+                print("deleting unsuccessful",res.status_code,res.content)
         except:
             tr()
             
@@ -850,6 +851,7 @@ class dataEx:
             validMonth = 12
             validYear = 2023
         
+
         return validMonth,validYear
 
 
@@ -867,7 +869,8 @@ class dataEx:
         currentSecond = currentTime.second
         last5Minute = abs(currentMinute - 5)
         validMonth,validYear = self.getValidMonthAndYearTbwes(currentMonth)
-
+        if (validMonth == 11) and currentDay < 16:
+            validMonth = 12
         startDate = "{}/{}/{} {}:{}:{}".format(validYear,validMonth,currentDay,currentHour,last5Minute,currentSecond)
         endDate = "{}/{}/{} {}:{}:{}".format(validYear,validMonth,currentDay,currentHour,currentMinute,currentSecond)
         startDate = datetime.datetime.strptime(startDate, '%Y/%m/%d %H:%M:%S')
@@ -945,13 +948,14 @@ class dataEx:
 
         
         currentTime = datetime.datetime(2024, 5, 7,11,28,00)  - datetime.timedelta(hours = 5,minutes=30)
-        currentTime = datetime.datetime(2024, 6, 28,1,00,00)  - datetime.timedelta(hours = 5,minutes=30)
+        currentTime = datetime.datetime(2024, 7, 6,16,00,00)  - datetime.timedelta(hours = 5,minutes=30)
 
         currentMonth = currentTime.month 
         currentQuarter = (currentMonth-1)//3 + 1
         currentDay = currentTime.day 
-        if currentDay > 28:
-                currentDay = int(random.randint(12, 25))
+
+        if currentDay > 28 or currentDay in [7,8,9]:
+                currentDay = currentDay - 4
         # currentDay = 25
         currentHour = currentTime.hour
         currentMinute =  currentTime.minute
@@ -978,82 +982,16 @@ class dataEx:
         self.now = time.mktime(currentTime.timetuple())*1000
         tag_df = self.getTagmeta(unitsId)
         print(startTimestamp,endTimestamp)
-        et = int(time.time()*1000) -  1*1000*60*60*24*2
 
         for i in range(1):
             print("Back filling")
             tagList = list(set(list(tag_df["dataTagId"]))) 
-            tagList2 =  [
-                "SIK_Bataan_BLR_1_FUEL_1_COAL_FLOW",
-                "SIK_Bataan_BLR_1_FUEL_1_FC",
-                "SIK_Bataan_BLR_1_FUEL_1_VM",
-                "SIK_Bataan_BLR_1_FUEL_1_TM",
-                "SIK_Bataan_BLR_1_FUEL_1_SM",
-                "SIK_Bataan_BLR_1_FUEL_1_IM",
-                "SIK_Bataan_BLR_1_FUEL_1_ASH",
-                "SIK_Bataan_BLR_1_FUEL_1_GCV",
-                "SIK_Bataan_BLR_1_FUEL_1_SULPHUR",
-                "SIK_Bataan_BLR_1_FUEL_1_COST",
-                "SIK_Bataan_BLR_1_FUEL_2_COAL_FLOW",
-                "SIK_Bataan_BLR_1_FUEL_2_FC",
-                "SIK_Bataan_BLR_1_FUEL_2_VM",
-                "SIK_Bataan_BLR_1_FUEL_2_TM",
-                "SIK_Bataan_BLR_1_FUEL_2_SM",
-                "SIK_Bataan_BLR_1_FUEL_2_IM",
-                "SIK_Bataan_BLR_1_FUEL_2_ASH",
-                "SIK_Bataan_BLR_1_FUEL_2_GCV",
-                "SIK_Bataan_BLR_1_FUEL_2_SULPHUR",
-                "SIK_Bataan_BLR_1_FUEL_2_COST",
-                "SIK_Bataan_BLR_1_FUEL_3_COAL_FLOW",
-                "SIK_Bataan_BLR_1_FUEL_3_FC",
-                "SIK_Bataan_BLR_1_FUEL_3_VM",
-                "SIK_Bataan_BLR_1_FUEL_3_TM",
-                "SIK_Bataan_BLR_1_FUEL_3_SM",
-                "SIK_Bataan_BLR_1_FUEL_3_IM",
-                "SIK_Bataan_BLR_1_FUEL_3_ASH",
-                "SIK_Bataan_BLR_1_FUEL_3_GCV",
-                "SIK_Bataan_BLR_1_FUEL_3_SULPHUR",
-                "SIK_Bataan_BLR_1_FUEL_3_COST",
-                "SIK_Bataan_BLR_1_COInFlueGasPPM",
-                "SIK_Bataan_BLR_1_CO2",
-                "SIK_Bataan_BLR_1_COAL_FLOW",
-                "SIK_Bataan_BLR_1_FUEL_WGT_AVG_FC",
-                "SIK_Bataan_BLR_1_FUEL_WGT_AVG_VM",
-                "SIK_Bataan_BLR_1_FUEL_WGT_AVG_TM",
-                "SIK_Bataan_BLR_1_FUEL_WGT_AVG_SM",
-                "SIK_Bataan_BLR_1_FUEL_WGT_AVG_IM",
-                "SIK_Bataan_BLR_1_FUEL_WGT_AVG_ASH",
-                "SIK_Bataan_BLR_1_FUEL_WGT_AVG_GCV",
-                "SIK_Bataan_BLR_1_FUEL_WGT_AVG_SULPHUR",
-                "SIK_Bataan_BLR_1_FUEL_WGT_AVG_COST",
-                "SIK_Bataan_BLR_1_FLY_ASH",
-                "SIK_Bataan_BLR_1_BED_ASH",
-                "SIK_Bataan_BLR_1_FLY_ASH_QUANT",
-                "SIK_Bataan_BLR_1_BED_ASH_QUANT",
-                "SIK_Bataan_BLR_1_AIR_HUMIDITY_FACTOR",
-                "SIK_Bataan_BLR_1_RADIATION",
-                "SIK_Bataan_BLR_1_LOSS_UNACCOUNTED",
-                "SIK_Bataan_CHIMNEY_CO",
-                    "SIK_RAW_WATER_TOTALIZER",
-                    "SIK_Bataan_DM_WATER",
-                    "SIK_Bataan_AUC_POW_CONS_PRCNT",
-                    "SIK_Bataan_AUX_POW_CONS_KW",
-                    "SIK_Bataan_1_FORCED_OUTAGE",
-                    "SIK_Bataan_1_TG_STARTUP",
-                    "SIK_Generator System_1_Bataan_1_BLR_STARTUP",
-                    "SIK_Generator System_1_Bataan_1_COAL_CONSUMPTION_STARTUP",
-                    "SIK_Generator System_1_Bataan_1_TOT_BLOW_DOWN",
-                    "SIK_Generator System_1_Bataan_1_FEED_WATER_TDS",
-                    "SIK_Generator System_1_Bataan_1_MAX_WATER_TDS",
-                    "SIK_Generator System_1_Bataan_1_LIFT_PRESSURE_SAFETY_VALVE",
-                    "SIK_Generator System_1_Bataan_1_RESET_PRESSURE_SAFETY_VALVE",
-                    "SIK_Generator System_1_Bataan_1_OPENING_SAFETY_VALVE"
-
-]
-            # newList = [ x.replace(sourcePredix,destPrefix)  for x in tagList if sourcePredix in x]
-            # for i in range(0,len(newList),10):
+            
+            newList = [ x.replace(sourcePredix,destPrefix)  for x in tagList if sourcePredix in x]
+            # for i in range(0,len(newList),25):
+            #     et = int(time.time()*1000) 
             #     st = et - 1*1000*60*60*24
-            #     self.deleteKairos(newList[i:i+10],st,et)
+            #     self.deleteKairos(newList[i:i+25],st,et,self.destPrefix)
             
             # self.dataExachangePower(tagList,startTimestamp,endTimestamp,client)
             if startTimestamp > endTimestamp:
@@ -1061,10 +999,7 @@ class dataEx:
             else:
                 self.dataExachangePower(tagList,startTimestamp,endTimestamp,client)
 
-            if startTimestamp > endTimestamp:
-                self.dataExachangePower(tagList2,endTimestamp,startTimestamp,client)
-            else:
-                self.dataExachangePower(tagList2,startTimestamp,endTimestamp,client)
+            
             endTimestamp = startTimestamp
             startTimestamp = endTimestamp - 1*1000*60*60*24
             self.now = self.now -  1*1000*60*60*24
@@ -1241,8 +1176,8 @@ class dataEx:
             # currentMonth = currentTime.month 
             # currentQuarter = (currentMonth-1)//3 + 1
             currentDay = currentTime.day 
-            if currentDay > 28:
-                currentDay = 20
+            if currentDay > 28 or currentDay in [7,8,9]:
+                currentDay = currentDay - 4
             currentHour = currentTime.hour
             currentMinute =  currentTime.minute
             currentSecond = currentTime.second
@@ -1276,73 +1211,7 @@ class dataEx:
             tag_df = self.getTagmeta(sourceUnitId)
 
             tagList = list(set(list(tag_df["dataTagId"])))
-            tagList2 =  [
-                    "SIK_Bataan_BLR_1_FUEL_1_COAL_FLOW",
-                    "SIK_Bataan_BLR_1_FUEL_1_FC",
-                    "SIK_Bataan_BLR_1_FUEL_1_VM",
-                    "SIK_Bataan_BLR_1_FUEL_1_TM",
-                    "SIK_Bataan_BLR_1_FUEL_1_SM",
-                    "SIK_Bataan_BLR_1_FUEL_1_IM",
-                    "SIK_Bataan_BLR_1_FUEL_1_ASH",
-                    "SIK_Bataan_BLR_1_FUEL_1_GCV",
-                    "SIK_Bataan_BLR_1_FUEL_1_SULPHUR",
-                    "SIK_Bataan_BLR_1_FUEL_1_COST",
-                    "SIK_Bataan_BLR_1_FUEL_2_COAL_FLOW",
-                    "SIK_Bataan_BLR_1_FUEL_2_FC",
-                    "SIK_Bataan_BLR_1_FUEL_2_VM",
-                    "SIK_Bataan_BLR_1_FUEL_2_TM",
-                    "SIK_Bataan_BLR_1_FUEL_2_SM",
-                    "SIK_Bataan_BLR_1_FUEL_2_IM",
-                    "SIK_Bataan_BLR_1_FUEL_2_ASH",
-                    "SIK_Bataan_BLR_1_FUEL_2_GCV",
-                    "SIK_Bataan_BLR_1_FUEL_2_SULPHUR",
-                    "SIK_Bataan_BLR_1_FUEL_2_COST",
-                    "SIK_Bataan_BLR_1_FUEL_3_COAL_FLOW",
-                    "SIK_Bataan_BLR_1_FUEL_3_FC",
-                    "SIK_Bataan_BLR_1_FUEL_3_VM",
-                    "SIK_Bataan_BLR_1_FUEL_3_TM",
-                    "SIK_Bataan_BLR_1_FUEL_3_SM",
-                    "SIK_Bataan_BLR_1_FUEL_3_IM",
-                    "SIK_Bataan_BLR_1_FUEL_3_ASH",
-                    "SIK_Bataan_BLR_1_FUEL_3_GCV",
-                    "SIK_Bataan_BLR_1_FUEL_3_SULPHUR",
-                    "SIK_Bataan_BLR_1_FUEL_3_COST",
-                    "SIK_Bataan_BLR_1_COInFlueGasPPM",
-                    "SIK_Bataan_BLR_1_CO2",
-                    "SIK_Bataan_BLR_1_COAL_FLOW",
-                    "SIK_Bataan_BLR_1_FUEL_WGT_AVG_FC",
-                    "SIK_Bataan_BLR_1_FUEL_WGT_AVG_VM",
-                    "SIK_Bataan_BLR_1_FUEL_WGT_AVG_TM",
-                    "SIK_Bataan_BLR_1_FUEL_WGT_AVG_SM",
-                    "SIK_Bataan_BLR_1_FUEL_WGT_AVG_IM",
-                    "SIK_Bataan_BLR_1_FUEL_WGT_AVG_ASH",
-                    "SIK_Bataan_BLR_1_FUEL_WGT_AVG_GCV",
-                    "SIK_Bataan_BLR_1_FUEL_WGT_AVG_SULPHUR",
-                    "SIK_Bataan_BLR_1_FUEL_WGT_AVG_COST",
-                    "SIK_Bataan_BLR_1_FLY_ASH",
-                    "SIK_Bataan_BLR_1_BED_ASH",
-                    "SIK_Bataan_BLR_1_FLY_ASH_QUANT",
-                    "SIK_Bataan_BLR_1_BED_ASH_QUANT",
-                    "SIK_Bataan_BLR_1_AIR_HUMIDITY_FACTOR",
-                    "SIK_Bataan_BLR_1_RADIATION",
-                    "SIK_Bataan_BLR_1_LOSS_UNACCOUNTED",
-                    "SIK_Bataan_CHIMNEY_CO",
-                        "SIK_RAW_WATER_TOTALIZER",
-                        "SIK_Bataan_DM_WATER",
-                        "SIK_Bataan_AUC_POW_CONS_PRCNT",
-                        "SIK_Bataan_AUX_POW_CONS_KW",
-                        "SIK_Bataan_1_FORCED_OUTAGE",
-                        "SIK_Bataan_1_TG_STARTUP",
-                        "SIK_Generator System_1_Bataan_1_BLR_STARTUP",
-                        "SIK_Generator System_1_Bataan_1_COAL_CONSUMPTION_STARTUP",
-                        "SIK_Generator System_1_Bataan_1_TOT_BLOW_DOWN",
-                        "SIK_Generator System_1_Bataan_1_FEED_WATER_TDS",
-                        "SIK_Generator System_1_Bataan_1_MAX_WATER_TDS",
-                        "SIK_Generator System_1_Bataan_1_LIFT_PRESSURE_SAFETY_VALVE",
-                        "SIK_Generator System_1_Bataan_1_RESET_PRESSURE_SAFETY_VALVE",
-                        "SIK_Generator System_1_Bataan_1_OPENING_SAFETY_VALVE"
-
-]
+            
             print("time frame",startDate,endDate)
             print("time frame",startTimestamp,endTimestamp)
 
@@ -1353,10 +1222,6 @@ class dataEx:
             else:
                 self.dataExachangePower(tagList,startTimestamp,endTimestamp,client,sourceUnitId)
 
-            if startTimestamp > endTimestamp:
-                self.dataExachangePower(tagList2,endTimestamp,startTimestamp,client,sourceUnitId,dataEntry=True)
-            else:
-                self.dataExachangePower(tagList2,startTimestamp,endTimestamp,client,sourceUnitId,dataEntry = True)
             self.lastUpdateValueRedis(self.destUnitId,"YYM_21_MW_001")
 
         except:
