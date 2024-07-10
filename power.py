@@ -49,9 +49,9 @@ sourcePredix = "SIK"
 destPrefix = "YYM"
 
 dataEx = dataEx()
-dataEx.mainFuncPower(sourceUnitsId,destUnitId,client,sourcePredix,destPrefix)
-# dataEx.mainFuncPowerBackFIll(sourceUnitsId,client,destUnitId,sourcePredix,destPrefix)
-# exit()
+# dataEx.mainFuncPower(sourceUnitsId,destUnitId,client,sourcePredix,destPrefix)
+dataEx.mainFuncPowerBackFIll(sourceUnitsId,client,destUnitId,sourcePredix,destPrefix)
+exit()
 scheduler = BackgroundScheduler()
 scheduler.add_job(func=dataEx.mainFuncPower,args=[sourceUnitsId,destUnitId,client,sourcePredix,destPrefix], trigger="interval", seconds=60*5,max_instances=3)
 scheduler.start()
