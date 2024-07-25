@@ -15,12 +15,12 @@ from datetime import timedelta
 import numpy as np
 #import timeseries as ts
 import platform
-# version = platform.python_version().split(".")[0]
-# if version == "3":
-#     import app_config.app_config as cfg
-# elif version == "2":
-#     import app_config as cfg
-# config = cfg.getconfig()
+version = platform.python_version().split(".")[0]
+if version == "3":
+    import app_config.app_config as cfg
+elif version == "2":
+    import app_config as cfg
+config = cfg.getconfig()
 import paho.mqtt.client as paho
 import grequests
 import sys
@@ -34,12 +34,12 @@ from requests.auth import HTTPBasicAuth
 # res = requests.get(url)
 # config = json.loads(res.content)[0]
 
-config = {"api":{}}
-config["BROKER_ADDRESS"] = "edgelive.thermaxglobal.com"
-config["api"]["meta"] = "https://edgelive.thermaxglobal.com/exactapi"
-config["api"]["query"] = "https://edgelive.thermaxglobal.com/api/v1/datapoints/query"
-config["api"]["datapoints"] = "https://edgelive.thermaxglobal.com/exactdata/api/v1/datapoints"
-config["type"] = "manual"
+# config = {"api":{}}
+# config["BROKER_ADDRESS"] = "edgelive.thermaxglobal.com"
+# config["api"]["meta"] = "https://edgelive.thermaxglobal.com/exactapi"
+# config["api"]["query"] = "https://edgelive.thermaxglobal.com/api/v1/datapoints/query"
+# config["api"]["datapoints"] = "https://edgelive.thermaxglobal.com/exactdata/api/v1/datapoints"
+# config["type"] = "manual"
 
 
 def tr():
