@@ -1297,8 +1297,8 @@ class dataEx:
                 post_body = [{"name":new_tag,"datapoints":post_array,"tags": {"type":"derived"}}]
                 print(post_body)
 
-                res1 = requests.post(post_url,json=post_body,auth = HTTPBasicAuth("es-user", "Albuquerque#871!"))
-                # res1 = requests.post(post_url,json=post_body)
+                # res1 = requests.post(post_url,json=post_body,auth = HTTPBasicAuth("es-user", "Albuquerque#871!"))
+                res1 = requests.post(post_url,json=post_body)
                 # print(post_body)
                 print("`"*30,str(len(post_array)),"`"*30)
 
