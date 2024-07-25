@@ -545,7 +545,7 @@ class dataEx:
                 valid_df.reset_index(drop = True,inplace=True)
                 
                 for i in valid_df.index:
-                    valid_df.loc[i,'newTime'] = currentTimeStamp - i*1000
+                    valid_df.loc[i,'newTime'] = currentTimeStamp - i*1000*60
 
 
                 valid_df['newDate']=pd.to_datetime(valid_df['newTime'],unit='ms')
@@ -1281,22 +1281,24 @@ class dataEx:
                 valid_df.reset_index(drop = True,inplace=True)
                 
                 for i in valid_df.index:
-                    valid_df.loc[i,'newTime'] = currentTimeStamp - i*1000
+                    valid_df.loc[i,'newTime'] = currentTimeStamp - i*1000*60
 
 
                 valid_df['newDate']=pd.to_datetime(valid_df['newTime'],unit='ms')
                 
                 # print(valid_df)
                 post_url = config["api"]["datapoints"]
+                print(post_url)
                 post_array = []
                 for i in range(0,len(valid_df)):
                     if valid_df.loc[i,taglist[0]] != None:
                         post = [int(valid_df.loc[i,'newTime']),float(valid_df.loc[i,taglist[0]])]
                         post_array.append(post)
-                 
                 post_body = [{"name":new_tag,"datapoints":post_array,"tags": {"type":"derived"}}]
-                # res1 = requests.post(post_url,json=post_body,auth = HTTPBasicAuth("es-user", "Albuquerque#871!"))
-                res1 = requests.post(post_url,json=post_body)
+                print(post_body)
+
+                res1 = requests.post(post_url,json=post_body,auth = HTTPBasicAuth("es-user", "Albuquerque#871!"))
+                # res1 = requests.post(post_url,json=post_body)
                 # print(post_body)
                 print("`"*30,str(len(post_array)),"`"*30)
 
