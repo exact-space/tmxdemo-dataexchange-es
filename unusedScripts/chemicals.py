@@ -58,6 +58,7 @@ qb_df = dataEx.getTagmeta(unitsId)
 fileNames = ["tmx_chemicals_demo.csv"]
 dataEx.downloadingFileMultipleFiles(fileNames)
 maidf = pd.read_csv(fileNames[0],parse_dates=["Date"])
-for tag in qb_df["dataTagId"]:
-    dataEx.dataExachangeChemicals([tag],validDay,currentHour,currentMinute,last5Minute,currentTimeStamp,maidf)
+print(maidf)
+# for tag in qb_df["dataTagId"]:
+#     dataEx.dataExachangeChemicals([tag],validDay,currentHour,currentMinute,last5Minute,currentTimeStamp,maidf)
 #dataEx.removeFiles(fileNames)  

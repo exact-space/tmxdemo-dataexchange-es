@@ -11,21 +11,35 @@ import os
 import time
 import datetime
 from datetime import timedelta
+
 import numpy as np
 #import timeseries as ts
 import platform
-version = platform.python_version().split(".")[0]
-if version == "3":
-    import app_config.app_config as cfg
-elif version == "2":
-    import app_config as cfg
-config = cfg.getconfig()
+# version = platform.python_version().split(".")[0]
+# if version == "3":
+#     import app_config.app_config as cfg
+# elif version == "2":
+#     import app_config as cfg
+# config = cfg.getconfig()
 import paho.mqtt.client as paho
 import grequests
-config = cfg.getconfig()
 import sys
 import traceback
 import redis
+from requests.auth import HTTPBasicAuth 
+
+
+
+# url = "https://edgelive.thermaxglobal.com/exactapi/configs"
+# res = requests.get(url)
+# config = json.loads(res.content)[0]
+
+config = {"api":{}}
+config["BROKER_ADDRESS"] = "edgelive.thermaxglobal.com"
+config["api"]["meta"] = "https://edgelive.thermaxglobal.com/exactapi"
+config["api"]["query"] = "https://edgelive.thermaxglobal.com/api/v1/datapoints/query"
+config["api"]["datapoints"] = "https://edgelive.thermaxglobal.com/exactdata/api/v1/datapoints"
+config["type"] = "manual"
 
 
 def tr():
@@ -50,6 +64,8 @@ class dataEx:
             
         except:
             tr()
+
+
     def getUnitdetails(self,unitsId):
         query = {"id":unitsId}
         urlQuery = config["api"]["meta"]+'/units/?filter={"where":' + json.dumps(query) + '}'
@@ -124,6 +140,7 @@ class dataEx:
         res = json.loads(res.content)
         self.token =  res["id"]
         
+        
     def get5MinValues(self,tagList):
         d = {
       "metrics": [
@@ -160,44 +177,8 @@ class dataEx:
         df=df.drop_duplicates(keep='first').reset_index(drop=True)
         df['Date']=pd.to_datetime(df['Time'],unit='ms')
         return df
-        
-    def getValues(self,tagList,startTime,endTime):
-        d = {
-      "metrics": [
-        {
-          "tags": {},
-          "name": "",
-          "limit": "9",
-          "order" :"desc"
-        }
-      ],
-      "plugins": [],
-      "cache_time": 0,
-      "start_absolute": int(startTime),
-      "end_absolute": int(endTime)
-    }
-        for tag in tagList:
-            d['metrics'][0]['name'] = tag
-        # print(d)
-        # res=requests.post(url=self.url_kairos, headers={"Authorization": self.token}, json=d)
-        res=requests.post(url=self.url_kairos, json=d)
-        values=json.loads(res.content)
-        temp=0
-        for val in values['queries']:
-            try:
-                df1=pd.DataFrame(val['results'][0]['values'], columns=['Time', val['results'][0]['name']])
-                if temp==1:
-                    df=pd.merge(df,df1, on='Time', how="outer")
-                else:
-                    df=df1 
-            except Exception as e:
-                print(e)
-            temp=1
-
-        df=df.drop_duplicates(keep='first').reset_index(drop=True)
-        df['Date']=pd.to_datetime(df['Time'],unit='ms')
-        return df
-        
+    
+   
     def getLastValues(self,taglist,end_absolute=0):
         if end_absolute !=0:
             query = {"metrics": [],"start_absolute": 1, end_absolute: end_absolute}
@@ -324,7 +305,7 @@ class dataEx:
                 # print(self.now)
                 endTime = df_LV.loc[0,'time']
                 startTime = endTime - 1*1000*60*20
-                df = self.getValues(taglist,startTime,endTime)
+                df = self.getValuesV2(taglist,startTime,endTime)
                 df.dropna(inplace=True)
                 df = df[df[taglist[0]]!='NaN']
                 df.reset_index(drop=True,inplace=True)
@@ -357,7 +338,7 @@ class dataEx:
                 # print(self.now)
                 endTime = 1659466200000
                 startTime = 1659465000000
-                df = self.getValues(taglist,startTime,endTime)
+                df = self.getValuesV2(taglist,startTime,endTime)
                 # print(df)
                 df.dropna(inplace=True)
                 df = df[df[taglist[0]]!='NaN']
@@ -416,7 +397,7 @@ class dataEx:
                 # print(self.now)
                 endTime = df_LV.loc[0,'time']
                 startTime = endTime - 1*1000*60*20
-                df = self.getValues(taglist,startTime,endTime)
+                df = self.getValuesV2(taglist,startTime,endTime)
                 df.dropna(inplace=True)
                 df = df[df[taglist[0]]!='NaN']
                 df.reset_index(drop=True,inplace=True)
@@ -449,7 +430,7 @@ class dataEx:
                 # print(self.now)
                 endTime = 1708454460000
                 startTime = 1708453800000
-                df = self.getValues(taglist,startTime,endTime)
+                df = self.getValuesV2(taglist,startTime,endTime)
                 # print(df)
                 df.dropna(inplace=True)
                 df = df[df[taglist[0]]!='NaN']
@@ -545,21 +526,6 @@ class dataEx:
             df.dropna(axis=0,inplace=True)
             if len(df) >0:
                 new_tag = taglist[0].replace("QBX1_","SMR_")
-                # print(new_tag)
-                # df['Date']=pd.to_datetime(df['Time'],unit='ms',errors='coerce')
-                
-                # print(df)
-                # print(df["Date"].isnull().sum())
-                
-                #creating upper and lower limits
-                # Q1 = df[taglist[0]].quantile(0.25)
-                # Q3 = df[taglist[0]].quantile(0.75)
-                # IQR = Q3 - Q1
-                # Upper_limit = Q3 + 3*IQR
-                # Lower_limit = Q1 - 1.5*IQR
-                # print(Lower_limit,Upper_limit)
-                
-                
                 
                 df['Day'] = df['Date'].dt.day
                 df['Hour'] = df['Date'].dt.hour
@@ -1128,6 +1094,7 @@ class dataEx:
                             
                         try:
                             res1 = requests.post(post_url,json=post_body)
+                            # res1 = requests.post(post_url,json=post_body,auth = HTTPBasicAuth("es-user", "Albuquerque#871!"))
                             print("posting on",post_url)
                             print("`"*30,str(new_tag),"`"*30)
                             print("`"*30,str(res1.status_code),"`"*30)
@@ -1236,13 +1203,10 @@ class dataEx:
 
             currentTimeStamp = self.now = int(time.time()*1000)
             
-
             currentTime = datetime.datetime.now()
             # currentMonth = currentTime.month 
             # currentQuarter = (currentMonth-1)//3 + 1
-            currentDay = currentTime.day 
-            if currentDay > 28:
-                currentDay = int(random.randint(12, 25))
+            currentDay = 22
             currentHour = currentTime.hour
             currentMinute =  currentTime.minute
             currentSecond = currentTime.second
@@ -1252,21 +1216,20 @@ class dataEx:
                 last5Minute = abs(60 - currentMinute)
                 currentHour = currentHour -1 
             # validMonth = (currentMonth - (currentQuarter-1)*3)
-            validMonth = 3
+            validMonth = 7
 
             startDate = "2024/{}/{} {}:{}:{}".format(validMonth,currentDay,currentHour,last5Minute,currentSecond)
             endDate = "2024/{}/{} {}:{}:{}".format(validMonth,currentDay,currentHour,currentMinute,currentSecond)
 
             print(startDate,endDate)
-            try:
-                startDate = datetime.datetime.strptime(startDate, '%Y/%m/%d %H:%M:%S')
-                endDate = datetime.datetime.strptime(endDate, '%Y/%m/%d %H:%M:%S')
-            except ValueError:
-                startDate = "2023/{}/{} {}:{}:{}".format(6,28,currentHour,last5Minute,currentSecond)
-                endDate = "2023/{}/{} {}:{}:{}".format(6,28,currentHour,currentMinute,currentSecond)
+            startDate = datetime.datetime.strptime(startDate, '%Y/%m/%d %H:%M:%S')
+            endDate = datetime.datetime.strptime(endDate, '%Y/%m/%d %H:%M:%S')
+            # except ValueError:
+            #     startDate = "2023/{}/{} {}:{}:{}".format(6,28,currentHour,last5Minute,currentSecond)
+            #     endDate = "2023/{}/{} {}:{}:{}".format(6,28,currentHour,currentMinute,currentSecond)
                 
-                startDate = datetime.datetime.strptime(startDate, '%Y/%m/%d %H:%M:%S')
-                endDate = datetime.datetime.strptime(endDate, '%Y/%m/%d %H:%M:%S')
+            #     startDate = datetime.datetime.strptime(startDate, '%Y/%m/%d %H:%M:%S')
+            #     endDate = datetime.datetime.strptime(endDate, '%Y/%m/%d %H:%M:%S')
 
 
             print(startDate,endDate)
@@ -1289,6 +1252,60 @@ class dataEx:
         except:
             tr()
 
+          
+    def dataExachangeWrs(self,taglist,currentHour,currentMinute,last5Minute,currentTimeStamp,df):
+    #Get the valid Data
+        print("checking for tag",taglist)
+        try:
+            # df = pd.read_csv(taglist[0]+".csv")
+            df.dropna(axis=0,inplace=True)
+            if len(df) >0:
+                if self.sourcePrefix in taglist[0]:
+                    new_tag = taglist[0].replace(self.sourcePrefix,self.destPrefix)
+                else:
+                    new_tag = self.destPrefix + "_" +taglist[0]
+                    
+            
+                
+                df['Day'] = df['Date'].dt.day
+                df['Hour'] = df['Date'].dt.hour
+                df['Minute'] = df['Date'].dt.minute
+
+                
+                valid_df = df[(df["Hour"] == currentHour)
+                        & (df["Minute"] <= currentMinute) & (df["Minute"] >= last5Minute) ].copy()
+               
+                if len(valid_df) == 0:
+                    valid_df = df[:5]
+                
+                valid_df.reset_index(drop = True,inplace=True)
+                
+                for i in valid_df.index:
+                    valid_df.loc[i,'newTime'] = currentTimeStamp - i*1000
+
+
+                valid_df['newDate']=pd.to_datetime(valid_df['newTime'],unit='ms')
+                
+                # print(valid_df)
+                post_url = config["api"]["datapoints"]
+                post_array = []
+                for i in range(0,len(valid_df)):
+                    if valid_df.loc[i,taglist[0]] != None:
+                        post = [int(valid_df.loc[i,'newTime']),float(valid_df.loc[i,taglist[0]])]
+                        post_array.append(post)
+                 
+                post_body = [{"name":new_tag,"datapoints":post_array,"tags": {"type":"derived"}}]
+                # res1 = requests.post(post_url,json=post_body,auth = HTTPBasicAuth("es-user", "Albuquerque#871!"))
+                res1 = requests.post(post_url,json=post_body)
+                # print(post_body)
+                print("`"*30,str(len(post_array)),"`"*30)
+
+                print("`"*30,str(new_tag),"`"*30)
+                print("`"*30,str(res1.status_code),"`"*30)
+        except Exception as e:
+            print(e)
+            pass
+       
 
     def mainFuncWRS(self,sourceUnitId,destUnitId,client,sourcePrefix,destPrefix):
         try:
@@ -1304,8 +1321,6 @@ class dataEx:
             # currentMonth = currentTime.month 
             # currentQuarter = (currentMonth-1)//3 + 1
             currentDay = currentTime.day 
-            if currentDay > 28:
-                currentDay = int(random.randint(12, 25))
             currentHour = currentTime.hour
             currentMinute =  currentTime.minute
             currentSecond = currentTime.second
@@ -1315,39 +1330,15 @@ class dataEx:
                 last5Minute = abs(60 - currentMinute)
                 currentHour = currentHour -1 
             # validMonth = (currentMonth - (currentQuarter-1)*3)
-            validMonth = 3
 
-            startDate = "2024/{}/{} {}:{}:{}".format(validMonth,currentDay,currentHour,last5Minute,currentSecond)
-            endDate = "2024/{}/{} {}:{}:{}".format(validMonth,currentDay,currentHour,currentMinute,currentSecond)
+            fileName = "./Pepsico_ERS_Demo_Data.csv"
 
-            print(startDate,endDate)
-            try:
-                startDate = datetime.datetime.strptime(startDate, '%Y/%m/%d %H:%M:%S')
-                endDate = datetime.datetime.strptime(endDate, '%Y/%m/%d %H:%M:%S')
-            except ValueError:
-                startDate = "2023/{}/{} {}:{}:{}".format(6,28,currentHour,last5Minute,currentSecond)
-                endDate = "2023/{}/{} {}:{}:{}".format(6,28,currentHour,currentMinute,currentSecond)
-                
-                startDate = datetime.datetime.strptime(startDate, '%Y/%m/%d %H:%M:%S')
-                endDate = datetime.datetime.strptime(endDate, '%Y/%m/%d %H:%M:%S')
+            # dataEx().downloadingFileMultipleFiles([fileName])
+            maindf = pd.read_csv(fileName,parse_dates=["Date"])
 
-
-            print(startDate,endDate)
-            startTimestamp=time.mktime(startDate.timetuple())*1000
-            endTimestamp=time.mktime(endDate.timetuple())*1000
-
-            tag_df = self.getTagmeta(sourceUnitId)
-
-            tagList = list(set(list(tag_df["dataTagId"])))
-            print("time frame",startDate,endDate)
-            print("time frame",startTimestamp,endTimestamp)
-
-            if startTimestamp > endTimestamp:
-                self.dataExachangePower(tagList,endTimestamp,startTimestamp,client,sourceUnitId)
-            else:
-                self.dataExachangePower(tagList,startTimestamp,endTimestamp,client,sourceUnitId)
-            # self.lastUpdateValueRedis(self.destUnitId,"YYM_21_MW_001")
-
+            for tag in (list(maindf.columns[1:])):
+                self.dataExachangeWrs([tag],currentHour,currentMinute,last5Minute,currentTimeStamp,maindf)
+            
         except:
             tr()
 
