@@ -34,12 +34,12 @@ from requests.auth import HTTPBasicAuth
 # res = requests.get(url)
 # config = json.loads(res.content)[0]
 
-config = {"api":{}}
-config["BROKER_ADDRESS"] = "edgelive.thermaxglobal.com"
-config["api"]["meta"] = "https://edgelive.thermaxglobal.com/exactapi"
-config["api"]["query"] = "https://edgelive.thermaxglobal.com/api/v1/datapoints/query"
-config["api"]["datapoints"] = "https://edgelive.thermaxglobal.com/exactdata/api/v1/datapoints"
-config["type"] = "manual"
+# config = {"api":{}}
+# config["BROKER_ADDRESS"] = "edgelive.thermaxglobal.com"
+# config["api"]["meta"] = "https://edgelive.thermaxglobal.com/exactapi"
+# config["api"]["query"] = "https://edgelive.thermaxglobal.com/api/v1/datapoints/query"
+# config["api"]["datapoints"] = "https://edgelive.thermaxglobal.com/exactdata/api/v1/datapoints"
+# config["type"] = "manual"
 
 
 def tr():
