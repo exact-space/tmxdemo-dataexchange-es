@@ -41,8 +41,6 @@ try:
 except:
     pass
 
-client.connect(config["BROKER_ADDRESS"], 1883, 2800)
-
 sourceUnitsId = "63fc54b033cc8b00080e0b39"
 destUnitId = "666bee57f5a60900074b2e15"
 sourcePredix = "YYO"
@@ -50,6 +48,8 @@ destPrefix = "UQD"
 
 dataEx = dataEx()
 dataEx.mainFuncETP(sourceUnitsId,destUnitId,client,sourcePredix,destPrefix)
+
+client.connect(config["BROKER_ADDRESS"], 1883, 2800)
 
 scheduler = BackgroundScheduler()
 scheduler.add_job(func=dataEx.mainFuncETP,args=[sourceUnitsId,destUnitId,client,sourcePredix,destPrefix], trigger="interval", seconds=60*5,max_instances=3)
