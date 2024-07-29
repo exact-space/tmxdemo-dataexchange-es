@@ -34,12 +34,12 @@ from requests.auth import HTTPBasicAuth
 # res = requests.get(url)
 # config = json.loads(res.content)[0]
 
-# config = {"api":{}}
-# config["BROKER_ADDRESS"] = "edgelive.thermaxglobal.com"
-# config["api"]["meta"] = "https://edgelive.thermaxglobal.com/exactapi"
-# config["api"]["query"] = "https://edgelive.thermaxglobal.com/api/v1/datapoints/query"
-# config["api"]["datapoints"] = "https://edgelive.thermaxglobal.com/exactdata/api/v1/datapoints"
-# config["type"] = "manual"
+config = {"api":{}}
+config["BROKER_ADDRESS"] = "edgelive.thermaxglobal.com"
+config["api"]["meta"] = "https://edgelive.thermaxglobal.com/exactapi"
+config["api"]["query"] = "https://edgelive.thermaxglobal.com/api/v1/datapoints/query"
+config["api"]["datapoints"] = "https://edgelive.thermaxglobal.com/exactdata/api/v1/datapoints"
+config["type"] = "manual"
 
 
 def tr():
@@ -1341,6 +1341,67 @@ class dataEx:
             for tag in (list(maindf.columns[1:])):
                 self.dataExachangeWrs([tag],currentHour,currentMinute,last5Minute,currentTimeStamp,maindf)
             
+        except:
+            tr()
+
+
+
+
+    def mainFuncZLD(self,sourceUnitId,destUnitId,client,sourcePrefix,destPrefix):
+        try:
+            self.sourceUnitId = sourceUnitId
+            self.destUnitId = destUnitId
+            self.sourcePrefix = sourcePrefix
+            self.destPrefix = destPrefix
+
+            currentTimeStamp = self.now = int(time.time()*1000)
+            
+            currentTime = datetime.datetime.now()
+            # currentMonth = currentTime.month 
+            # currentQuarter = (currentMonth-1)//3 + 1
+            currentDay = 22
+            currentHour = currentTime.hour
+            currentMinute =  currentTime.minute
+            currentSecond = currentTime.second
+            if currentMinute > 5:
+                last5Minute = abs(currentMinute - 5)
+            else:
+                last5Minute = abs(60 - currentMinute)
+                currentHour = currentHour -1 
+            # validMonth = (currentMonth - (currentQuarter-1)*3)
+            validMonth = 7
+
+            startDate = "2024/{}/{} {}:{}:{}".format(validMonth,currentDay,currentHour,last5Minute,currentSecond)
+            endDate = "2024/{}/{} {}:{}:{}".format(validMonth,currentDay,currentHour,currentMinute,currentSecond)
+
+            print(startDate,endDate)
+            startDate = datetime.datetime.strptime(startDate, '%Y/%m/%d %H:%M:%S')
+            endDate = datetime.datetime.strptime(endDate, '%Y/%m/%d %H:%M:%S')
+            # except ValueError:
+            #     startDate = "2023/{}/{} {}:{}:{}".format(6,28,currentHour,last5Minute,currentSecond)
+            #     endDate = "2023/{}/{} {}:{}:{}".format(6,28,currentHour,currentMinute,currentSecond)
+                
+            #     startDate = datetime.datetime.strptime(startDate, '%Y/%m/%d %H:%M:%S')
+            #     endDate = datetime.datetime.strptime(endDate, '%Y/%m/%d %H:%M:%S')
+
+
+            print(startDate,endDate)
+            startTimestamp=time.mktime(startDate.timetuple())*1000
+            endTimestamp=time.mktime(endDate.timetuple())*1000
+
+            tag_df = self.getTagmeta(sourceUnitId)
+
+            tagList = list(set(list(tag_df["dataTagId"])))
+
+            print("time frame",startDate,endDate)
+            print("time frame",startTimestamp,endTimestamp)
+
+            if startTimestamp > endTimestamp:
+                self.dataExachangePower(tagList,endTimestamp,startTimestamp,client,sourceUnitId)
+            else:
+                self.dataExachangePower(tagList,startTimestamp,endTimestamp,client,sourceUnitId)
+            # self.lastUpdateValueRedis(self.destUnitId,"YYM_21_MW_001")
+
         except:
             tr()
 
